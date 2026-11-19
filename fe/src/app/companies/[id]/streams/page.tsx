@@ -434,7 +434,7 @@ export default function StreamsEditorPage() {
                 ) : null}
               </HStack>
               <Text color="fg.muted" fontSize="sm" mb="3">
-                Not pushed yet. Push sends active offers. Removed offers stay
+                Push sends active offers. Removed offers stay
                 in the archive. Fetch waits for Push or Cancel.
                 {dirty ? " Local queue has pending actions." : ""}
               </Text>
