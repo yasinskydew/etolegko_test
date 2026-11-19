@@ -2,22 +2,13 @@
 
 import { Alert } from "@chakra-ui/react";
 
+import { driftActive } from "@/lib/syncDisplay";
 import type { Drift } from "@/lib/types";
 
 type Props = {
   drift: Drift | null;
   reconcileUnavailable?: boolean;
 };
-
-function hasDrift(drift: Drift): boolean {
-  return (
-    drift.campaign_missing ||
-    drift.offers ||
-    drift.geo ||
-    drift.traffic ||
-    drift.streams
-  );
-}
 
 export function DriftAlert({ drift, reconcileUnavailable }: Props) {
   if (reconcileUnavailable) {
@@ -34,7 +25,7 @@ export function DriftAlert({ drift, reconcileUnavailable }: Props) {
     );
   }
 
-  if (!drift || !hasDrift(drift)) return null;
+  if (!driftActive(drift)) return null;
 
   return (
     <Alert.Root status="warning" rounded="md">

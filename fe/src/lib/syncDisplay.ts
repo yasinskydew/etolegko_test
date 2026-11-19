@@ -5,7 +5,7 @@ export type SyncDisplay = {
   tone: "green" | "orange" | "red" | "purple";
 };
 
-function driftActive(drift: Drift | null | undefined): boolean {
+export function driftActive(drift: Drift | null | undefined): boolean {
   if (!drift) return false;
   return (
     drift.campaign_missing ||
