@@ -80,12 +80,6 @@ export default function StreamsEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, tabId, queueVersion, company?.version]);
 
-  const queueItems = useMemo(() => {
-    if (!Number.isFinite(companyId) || tabId === "ssr") return [];
-    return readQueue(companyId, tabId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, tabId, queueVersion]);
-
   const fetchDisabled =
     sync === "update_mode" ||
     dirty ||
@@ -447,11 +441,8 @@ export default function StreamsEditorPage() {
                 ) : null}
               </HStack>
               <Text color="fg.muted" fontSize="sm" mb="3">
-                Push sends active offers. Removed offers stay
-                in the archive. Fetch waits for Push or Cancel.
-                {dirty && sync !== "update_mode"
-                  ? " Local queue has pending actions."
-                  : ""}
+                Push sends active offers. Removed offers stay in the archive.
+                Fetch waits for Push or Cancel.
               </Text>
 
               <Box overflowX="auto">
@@ -482,12 +473,6 @@ export default function StreamsEditorPage() {
                   <Table.Body>{offers.map(renderOfferRow)}</Table.Body>
                 </Table.Root>
               </Box>
-
-              {queueItems.length && sync !== "update_mode" ? (
-                <Text mt="3" fontSize="sm" color="fg.muted">
-                  queue {queueItems.length}
-                </Text>
-              ) : null}
 
               <HStack mt="4" align="center" flexWrap="wrap" gap="2">
                 <Box flex="1" minW="200px">
@@ -547,7 +532,7 @@ export default function StreamsEditorPage() {
                   opacity={fetchDisabled ? 0.4 : 1}
                   title={
                     fetchDisabled
-                      ? "Fetch requires synced flow and empty local queue"
+                      ? "Fetch requires synced flow with no pending local changes"
                       : undefined
                   }
                   onClick={() => void onFetch()}
