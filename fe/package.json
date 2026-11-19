@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.38.0",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@chakra-ui/cli": "^3.38.0",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

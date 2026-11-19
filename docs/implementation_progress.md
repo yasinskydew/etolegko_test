@@ -15,7 +15,7 @@
 | 9. RTK Query | done | 2026-11-19 |
 | 10. Базовые компоненты | done | 2026-11-19 |
 | 11. Страницы | done | 2026-11-19 |
-| 12. Тестирование | pending | — |
+| 12. Тестирование | done | 2026-11-19 |
 
 ---
 
@@ -244,12 +244,16 @@
 
 ## Фаза 12. Тестирование
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Backend pytest + controllable `NoopKeitaroClient`: create idempotency/conflict/rollback, actions (version conflict, last free set_percent, restore clears pin, duplicate add), push archive + failure keeps update_mode, cancel, fetch blocked/synced, enable/disable, version race
+- Существующий `tests/test_weight_util.py` сохранён
+- Frontend e2e: Playwright smoke `fe/e2e/login.spec.ts` (login page renders)
 
 ### Комментарии
 
-—
+- Продуктовый код не менялся (только тесты / deps pytest-asyncio)
+- Полный браузерный сценарий create→editor — по желанию после merge стека PR
