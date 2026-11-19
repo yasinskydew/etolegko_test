@@ -449,7 +449,9 @@ export default function StreamsEditorPage() {
               <Text color="fg.muted" fontSize="sm" mb="3">
                 Push sends active offers. Removed offers stay
                 in the archive. Fetch waits for Push or Cancel.
-                {dirty ? " Local queue has pending actions." : ""}
+                {dirty && sync !== "update_mode"
+                  ? " Local queue has pending actions."
+                  : ""}
               </Text>
 
               <Box overflowX="auto">
@@ -481,7 +483,7 @@ export default function StreamsEditorPage() {
                 </Table.Root>
               </Box>
 
-              {queueItems.length ? (
+              {queueItems.length && sync !== "update_mode" ? (
                 <Text mt="3" fontSize="sm" color="fg.muted">
                   queue {queueItems.length}
                 </Text>
