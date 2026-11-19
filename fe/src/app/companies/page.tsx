@@ -110,10 +110,8 @@ export default function CompaniesPage() {
             <Table.Body>
               {items.map((c) => {
                 const syncUi = syncDisplayForList(c.sync);
-                const geo =
-                  c.geo_codes && c.geo_codes.length > 0
-                    ? c.geo_codes.join(", ")
-                    : null;
+                const geos = c.geo_codes ?? [];
+                const geo = geos.length > 0 ? geos.join(", ") : null;
                 return (
                   <Table.Row key={c.id}>
                     <Table.Cell>
@@ -154,10 +152,8 @@ export default function CompaniesPage() {
         >
           {items.map((c) => {
             const syncUi = syncDisplayForList(c.sync);
-            const geo =
-              c.geo_codes && c.geo_codes.length > 0
-                ? c.geo_codes.join(", ")
-                : "—";
+            const geos = c.geo_codes ?? [];
+            const geo = geos.length > 0 ? geos.join(", ") : "—";
             return (
               <Box
                 key={c.id}

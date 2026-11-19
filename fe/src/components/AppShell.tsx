@@ -134,19 +134,9 @@ function HeaderBreadcrumbs({
                 </Text>
               ) : null}
               {crumb.href && !isLast ? (
-                <Button
-                  asChild
-                  size="sm"
-                  variant="plain"
-                  h="auto"
-                  minW="0"
-                  px="0"
-                  py="0"
-                  fontWeight="normal"
-                  color="blue.fg"
-                >
+                <Text as="span" color="blue.fg">
                   <Link href={crumb.href}>{crumb.label}</Link>
-                </Button>
+                </Text>
               ) : (
                 <Text
                   as="span"
