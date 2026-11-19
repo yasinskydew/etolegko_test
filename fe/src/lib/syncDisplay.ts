@@ -32,14 +32,3 @@ export function syncDisplayForCard(
   }
   return null;
 }
-
-/** Sync column on companies list: local only (no mass Keitaro reconcile). */
-export function syncDisplayForList(sync: SyncStatus): SyncDisplay | null {
-  if (sync === "update_mode") {
-    return { label: "update mode", tone: "orange" };
-  }
-  if (sync === "synced") {
-    return { label: "synced", tone: "green" };
-  }
-  return null;
-}
