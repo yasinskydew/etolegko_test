@@ -190,7 +190,7 @@ export default function CompanyCardPage() {
                 opacity={fetchDisabled ? 0.4 : 1}
                 title={
                   fetchDisabled
-                    ? "Fetch requires synced flow (not update mode) and an existing campaign"
+                    ? "Fetch requires synced flow (not updating) and an existing campaign"
                     : "Pull campaign state from Keitaro"
                 }
                 onClick={() => void onFetch()}
