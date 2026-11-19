@@ -8,9 +8,9 @@
 | 2. Заглушка backend | done | 2026-11-19 |
 | 3. Доступ к базе | done | 2026-11-19 |
 | 4. Alembic | done | 2026-11-19 |
-| 5. Миграция | pending | — |
-| 6. JWT | pending | — |
-| 7. Домен | pending | — |
+| 5. Миграция | done | 2026-11-19 |
+| 6. JWT | done | 2026-11-19 |
+| 7. Домен | done | 2026-11-19 |
 | 8. Пустой frontend | pending | — |
 | 9. RTK Query | pending | — |
 | 10. Базовые компоненты | pending | — |
@@ -103,43 +103,60 @@
 
 ## Фаза 5. Миграция
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- SQLAlchemy модели: `User` (`"user"`), `Geo`, `Company`, `CompanyGeo`, `IdempotencyKey`, `Stream`, `StreamOffer`, `StreamOfferSnapshot` + enums
+- Alembic ревизия `20261119185515_initial_schema`: enums, таблицы, частичные UNIQUE индексы
+- Seed: 50 geo (MX,AU,RO,US,GB,…); admin из `ADMIN_USERNAME`/`ADMIN_PASSWORD` (bcrypt)
+- CRUD-репозитории через конструктор DI
+- Dockerfile: `alembic/` + `alembic.ini`, `entrypoint.sh` → `alembic upgrade head` затем uvicorn
+- compose: `DATABASE_URL` override на host `postgres`
 
 ### Комментарии
 
-—
+- Локально `alembic upgrade head` на `localhost` Postgres — ok
+- Enum create_type=False, чтобы не дублировать CREATE TYPE
 
 ---
 
 ## Фаза 6. JWT
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `POST /auth/login` → `{access_token, token_type}`; пароль только bcrypt-hash
+- Bearer JWT на всех маршрутах кроме login и `/health`
+- 401 `{error:"unauthorized", message}` при неверной паре / без токена
+- PyJWT + bcrypt
 
 ### Комментарии
 
-—
+- Logout сервером не хранится
 
 ---
 
 ## Фаза 7. Домен
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- 7.1 `WeightUtil` + pytest (11 tests): хвост 34/33/33, pin, restore снимает pin, пустой поток, запрет set_percent последнего свободного
+- 7.2 `KeitaroClient` (Protocol/ABC, httpx): таймауты; ретраи на чтение и повторный Push; resolve domain/group/source при старте
+- 7.3–7.6 Companies CRUD/actions/Push/Cancel/Fetch/geo/enable/disable/stats/`GET /offers`/drift
+- Optimistic lock `version` + `SELECT … FOR UPDATE`; ошибки `{error, message}`
 
 ### Комментарии
 
-—
+- **Keitaro noop mode:** если `KEITARO_URL` пуст — `NoopKeitaroClient`, resolve не падает (для локальной разработки без credentials). При непустом URL отсутствие domain/group/source → падение на старте (как в system-design).
+- Реальный Keitaro не проверялся (URL/ключ пустые в `.env`).
+- Фоновый reconcile `creating` не реализован (не требовался явно в 7.x).
 
 ---
 
