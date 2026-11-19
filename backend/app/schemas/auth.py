@@ -2,10 +2,14 @@ from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+    """Credentials for `POST /auth/login`."""
+
+    username: str = Field(min_length=1, description="Admin username from seed / env.")
+    password: str = Field(min_length=1, description="Plain password; verified against stored hash.")
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    """JWT access token. No refresh token."""
+
+    access_token: str = Field(description="Signed JWT to send as `Authorization: Bearer`.")
+    token_type: str = Field(default="bearer", description="Always `bearer`.")
