@@ -9,14 +9,14 @@ type Props = {
   reconcileUnavailable?: boolean;
 };
 
-function driftParts(drift: Drift): string[] {
-  const parts: string[] = [];
-  if (drift.campaign_missing) parts.push("campaign missing");
-  if (drift.offers) parts.push("offers");
-  if (drift.geo) parts.push("geo");
-  if (drift.traffic) parts.push("traffic");
-  if (drift.streams) parts.push("streams");
-  return parts;
+function hasDrift(drift: Drift): boolean {
+  return (
+    drift.campaign_missing ||
+    drift.offers ||
+    drift.geo ||
+    drift.traffic ||
+    drift.streams
+  );
 }
 
 export function DriftAlert({ drift, reconcileUnavailable }: Props) {
@@ -34,17 +34,12 @@ export function DriftAlert({ drift, reconcileUnavailable }: Props) {
     );
   }
 
-  if (!drift) return null;
-  const parts = driftParts(drift);
-  if (parts.length === 0) return null;
+  if (!drift || !hasDrift(drift)) return null;
 
   return (
     <Alert.Root status="warning" rounded="md">
       <Alert.Content>
-        <Alert.Title fontWeight="medium">
-          Tracker data differs
-          {parts.length ? ` (${parts.join(", ")})` : ""}
-        </Alert.Title>
+        <Alert.Title fontWeight="medium">Tracker data differs</Alert.Title>
       </Alert.Content>
     </Alert.Root>
   );
