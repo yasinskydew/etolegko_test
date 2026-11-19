@@ -1,0 +1,12 @@
+---
+description: Automated tests must never call a real Keitaro server — mocks only
+globs: backend/tests/**/*.{py},fe/e2e/**/*.{ts,tsx},**/*test*.{py,ts}
+alwaysApply: true
+---
+
+# Tests: no real Keitaro
+
+- Автотесты (pytest, Playwright e2e) **никогда** не ходят на реальный Keitaro Admin API.
+- Только моки: `MockKeitaroClient` / `NoopKeitaroClient`, `httpx.MockTransport` (или `respx`), route mocks в e2e.
+- В pytest `KEITARO_URL` принудительно пустой (см. `backend/tests/conftest.py`); не подставлять URL/ключ из `.env` для живого трекера.
+- Запрещено: живой `HttpKeitaroClient` к прод/стейдж Keitaro, ручные «smoke» к реальному серверу внутри CI/pytest.
