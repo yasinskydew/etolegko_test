@@ -22,7 +22,7 @@ export function syncDisplayForCard(
   drift: Drift | null | undefined,
 ): SyncDisplay | null {
   if (sync === "update_mode") {
-    return { label: "update mode", tone: "orange" };
+    return { label: "updating", tone: "orange" };
   }
   if (driftActive(drift)) {
     return { label: "drift", tone: "orange" };
