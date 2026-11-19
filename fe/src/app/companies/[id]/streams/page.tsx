@@ -360,19 +360,32 @@ export default function StreamsEditorPage() {
           Streams
         </Heading>
 
-        {companyQuery.isError ? (
-          <Text color="fg.error">{getErrorMessage(companyQuery.error)}</Text>
-        ) : null}
-        {error ? (
-          <Text color="fg.error" fontSize="sm">
-            {error}
-          </Text>
-        ) : null}
-        {message ? (
-          <Text color="fg.muted" fontSize="sm">
-            {message}
-          </Text>
-        ) : null}
+        <Box
+          minH="2.75rem"
+          aria-live="polite"
+          display="flex"
+          alignItems="flex-start"
+        >
+          {companyQuery.isError ? (
+            <Text color="fg.error" fontSize="sm" lineClamp={2}>
+              {getErrorMessage(companyQuery.error)}
+            </Text>
+          ) : error ? (
+            <Text color="fg.error" fontSize="sm" lineClamp={2}>
+              {error}
+            </Text>
+          ) : (
+            <Text
+              color="fg.muted"
+              fontSize="sm"
+              lineClamp={2}
+              visibility={message ? "visible" : "hidden"}
+              aria-hidden={!message}
+            >
+              {message || "\u00A0"}
+            </Text>
+          )}
+        </Box>
 
         {company ? (
           <>
