@@ -355,11 +355,8 @@ class HttpKeitaroClient(KeitaroClient):
         self._domain_name = domain_name
         self._group_name = group_name
         self._source_name = source_name
-        root = base_url.rstrip("/")
-        if not root.endswith("/admin_api/v1"):
-            root = f"{root}/admin_api/v1"
         self._client = httpx.AsyncClient(
-            base_url=root,
+            base_url=_normalize_admin_api_base(base_url),
             headers={"Api-Key": api_key, "Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
         )
@@ -616,14 +613,16 @@ class HttpKeitaroClient(KeitaroClient):
         stream_id: int,
         offers: list[tuple[int, int]],
     ) -> None:
+        # Admin API: PUT /streams/{id} (not /campaigns/{id}/streams/{id}).
         await self._request(
             "PUT",
-            f"/campaigns/{campaign_id}/streams/{stream_id}",
+            f"/streams/{stream_id}",
             json={
+                "campaign_id": campaign_id,
                 "offers": [
                     {"offer_id": oid, "share": share, "state": "active"}
                     for oid, share in offers
-                ]
+                ],
             },
             retry=True,
         )
@@ -635,13 +634,19 @@ class HttpKeitaroClient(KeitaroClient):
         stream_id: int,
         geo_codes: list[str],
     ) -> None:
+        """Update country filter on the google stream; BE persists company_geo after."""
         await self._request(
             "PUT",
-            f"/campaigns/{campaign_id}/streams/{stream_id}",
+            f"/streams/{stream_id}",
             json={
+                "campaign_id": campaign_id,
                 "filters": [
-                    {"name": "country", "mode": "accept", "payload": geo_codes}
-                ]
+                    {
+                        "name": "country",
+                        "mode": "accept",
+                        "payload": list(geo_codes),
+                    }
+                ],
             },
         )
 
@@ -736,6 +741,19 @@ def _stream_body(campaign_id: int, stream: StreamDraft) -> dict[str, Any]:
     if stream.action_payload is not None:
         body["action_payload"] = stream.action_payload
     return body
+
+
+def _normalize_admin_api_base(base_url: str) -> str:
+    """Ensure httpx base ends with `/admin_api/v1` (tolerate bare host or `/v1`)."""
+    root = base_url.strip().rstrip("/")
+    if root.endswith("/admin_api/v1"):
+        return root
+    if root.endswith("/admin_api"):
+        return f"{root}/v1"
+    if root.endswith("/v1"):
+        # e.g. https://host:8105/v1 → https://host:8105/admin_api/v1
+        return f"{root[: -len('/v1')]}/admin_api/v1"
+    return f"{root}/admin_api/v1"
 
 
 def _as_int(value: Any) -> int | None:
