@@ -24,6 +24,7 @@ import {
   getErrorMessage,
   useDisableCompanyMutation,
   useEnableCompanyMutation,
+  useFetchCompanyMutation,
   useGetCompanyQuery,
   useGetCompanyStatsQuery,
   usePatchGeoMutation,
@@ -35,6 +36,7 @@ export default function CompanyCardPage() {
   const companyId = Number(params.id);
   const [geoInput, setGeoInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const companyQuery = useGetCompanyQuery(companyId, {
     skip: !authed || !Number.isFinite(companyId),
@@ -45,11 +47,18 @@ export default function CompanyCardPage() {
   const [enableCompany, enableState] = useEnableCompanyMutation();
   const [disableCompany, disableState] = useDisableCompanyMutation();
   const [patchGeo, geoState] = usePatchGeoMutation();
+  const [fetchCompany, fetchState] = useFetchCompanyMutation();
 
   const company = companyQuery.data;
   const offersStream = company?.streams.find((s) => s.type === "offers");
   const offerNames =
     offersStream?.offers.filter((o) => !o.removed) ?? [];
+  const sync = offersStream?.sync ?? company?.sync ?? null;
+  const fetchDisabled =
+    sync === "update_mode" ||
+    !company ||
+    company.lifecycle !== "ready" ||
+    company.drift?.campaign_missing === true;
 
   if (!ready || !authed) return null;
 
@@ -76,6 +85,7 @@ export default function CompanyCardPage() {
   async function onSaveGeo() {
     if (!company || geoInput === null) return;
     setError(null);
+    setMessage(null);
     const geo_codes = geoInput
       .split(",")
       .map((g) => g.trim().toUpperCase())
@@ -92,6 +102,18 @@ export default function CompanyCardPage() {
     }
   }
 
+  async function onFetch() {
+    if (fetchDisabled || !company) return;
+    setError(null);
+    setMessage(null);
+    try {
+      await fetchCompany(company.id).unwrap();
+      setMessage("Fetched from tracker.");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }
+
   return (
     <AppShell title={company ? `Companies / ${company.name}` : "Company"}>
       <Stack gap="4">
@@ -101,6 +123,11 @@ export default function CompanyCardPage() {
         {error ? (
           <Text color="fg.error" fontSize="sm">
             {error}
+          </Text>
+        ) : null}
+        {message ? (
+          <Text color="fg.muted" fontSize="sm">
+            {message}
           </Text>
         ) : null}
 
@@ -142,6 +169,36 @@ export default function CompanyCardPage() {
               drift={company.drift}
               reconcileUnavailable={company.reconcile_unavailable}
             />
+
+            <HStack gap="2" flexWrap="wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="cyan"
+                loading={fetchState.isLoading}
+                disabled={fetchDisabled}
+                opacity={fetchDisabled ? 0.4 : 1}
+                title={
+                  fetchDisabled
+                    ? "Fetch requires synced flow (not update mode) and an existing campaign"
+                    : "Pull campaign state from Keitaro"
+                }
+                onClick={() => void onFetch()}
+              >
+                Fetch
+              </Button>
+              <Button
+                asChild
+                size="sm"
+                variant="solid"
+                colorPalette="blue"
+                disabled={company.lifecycle !== "ready"}
+              >
+                <Link href={`/companies/${company.id}/streams`}>
+                  View details
+                </Link>
+              </Button>
+            </HStack>
 
             <SimpleGrid columns={{ base: 1, md: 3 }} gap="3">
               {(
@@ -242,19 +299,6 @@ export default function CompanyCardPage() {
                     </Text>
                   </Box>
                 ) : null}
-                <HStack justify="flex-end" px="4" py="3">
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    colorPalette="cyan"
-                    disabled={company.lifecycle !== "ready"}
-                  >
-                    <Link href={`/companies/${company.id}/streams`}>
-                      View details
-                    </Link>
-                  </Button>
-                </HStack>
               </Box>
             </Stack>
           </>
