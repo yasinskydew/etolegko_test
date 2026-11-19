@@ -20,7 +20,6 @@ import { CreateCompanyModal } from "@/components/CreateCompanyModal";
 import { PagePagination } from "@/components/PagePagination";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
-import { syncDisplayForList } from "@/lib/syncDisplay";
 import { getErrorMessage, useListCompaniesQuery } from "@/store/api";
 
 const PAGE_SIZE = 20;
@@ -29,8 +28,6 @@ const LEGEND = [
   { label: "active", tone: "green" as const },
   { label: "disabled", tone: "red" as const },
   { label: "creating", tone: "purple" as const },
-  { label: "synced", tone: "green" as const },
-  { label: "update mode", tone: "orange" as const },
 ];
 
 export default function CompaniesPage() {
@@ -104,12 +101,10 @@ export default function CompaniesPage() {
                 <Table.ColumnHeader>Geo</Table.ColumnHeader>
                 <Table.ColumnHeader>Traffic</Table.ColumnHeader>
                 <Table.ColumnHeader>Lifecycle</Table.ColumnHeader>
-                <Table.ColumnHeader>Sync</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {items.map((c) => {
-                const syncUi = syncDisplayForList(c.sync);
                 const geos = c.geo_codes ?? [];
                 const geo = geos.length > 0 ? geos.join(", ") : null;
                 return (
@@ -118,25 +113,18 @@ export default function CompaniesPage() {
                       <Link href={`/companies/${c.id}`}>{c.name}</Link>
                     </Table.Cell>
                     <Table.Cell>
-                      {geo ? (
-                        geo
-                      ) : (
-                        <Text color="fg.muted">—</Text>
-                      )}
+                      {geo ? geo : <Text color="fg.muted">—</Text>}
                     </Table.Cell>
                     <Table.Cell>
                       {c.lifecycle === "creating" ? "—" : c.traffic_status}
                     </Table.Cell>
                     <Table.Cell>{c.lifecycle}</Table.Cell>
-                    <Table.Cell>
-                      {syncUi ? syncUi.label : "—"}
-                    </Table.Cell>
                   </Table.Row>
                 );
               })}
               {!isFetching && items.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={5}>
+                  <Table.Cell colSpan={4}>
                     <Text color="fg.muted">No companies yet.</Text>
                   </Table.Cell>
                 </Table.Row>
@@ -151,7 +139,6 @@ export default function CompaniesPage() {
           gap="4"
         >
           {items.map((c) => {
-            const syncUi = syncDisplayForList(c.sync);
             const geos = c.geo_codes ?? [];
             const geo = geos.length > 0 ? geos.join(", ") : "—";
             return (
@@ -183,12 +170,6 @@ export default function CompaniesPage() {
                             : "red"
                       }
                     />
-                    {syncUi ? (
-                      <StatusBadge
-                        label={syncUi.label}
-                        tone={syncUi.tone}
-                      />
-                    ) : null}
                     <Text fontSize="xs" color="fg.muted">
                       {geo}
                     </Text>
