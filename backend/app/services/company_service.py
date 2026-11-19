@@ -86,6 +86,8 @@ class CompanyService:
         items, total = await self._companies.list_paginated(
             q=q, page=page, page_size=page_size
         )
+        # No Keitaro reconcile on list (no mass Sync/drift updates).
+        # Drift is computed on company card GET only.
         return CompanyListResponse(
             items=[map_company_list_item(c) for c in items],
             page=page,

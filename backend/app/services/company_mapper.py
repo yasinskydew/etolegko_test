@@ -41,11 +41,13 @@ def map_stream(
 
 
 def map_company_list_item(company: Company) -> CompanyListItem:
+    geo_codes = [g.geo_code for g in sorted(company.geos, key=lambda x: x.position)]
     return CompanyListItem(
         id=company.id,
         name=company.name,
         lifecycle=company.lifecycle,
         traffic_status=company.traffic_status,
+        geo_codes=geo_codes,
         sync=compute_company_sync(
             list(company.streams),
             company.lifecycle.value,

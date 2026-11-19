@@ -46,6 +46,7 @@ export type CompanyListItem = {
   name: string;
   lifecycle: CompanyLifecycle;
   traffic_status: TrafficStatus;
+  geo_codes: string[];
   sync: SyncStatus;
   version: number;
 };

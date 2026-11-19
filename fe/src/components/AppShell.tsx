@@ -19,9 +19,17 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { clearToken, getToken } from "@/lib/auth";
 
+export type BreadcrumbItem = {
+  label: string;
+  href?: string;
+};
+
 type Props = {
   children: ReactNode;
+  /** Plain header label (used when breadcrumbs omitted). */
   title?: string;
+  /** Clickable crumbs; last item is current (no href). */
+  breadcrumbs?: BreadcrumbItem[];
 };
 
 const NAV = [
@@ -100,7 +108,68 @@ function SidebarBody({
   );
 }
 
-export function AppShell({ children, title }: Props) {
+function HeaderBreadcrumbs({
+  breadcrumbs,
+  title,
+}: {
+  breadcrumbs?: BreadcrumbItem[];
+  title?: string;
+}) {
+  if (breadcrumbs && breadcrumbs.length > 0) {
+    return (
+      <HStack
+        as="nav"
+        aria-label="Breadcrumb"
+        gap="1"
+        fontSize="sm"
+        flexWrap="wrap"
+      >
+        {breadcrumbs.map((crumb, index) => {
+          const isLast = index === breadcrumbs.length - 1;
+          return (
+            <HStack key={`${crumb.label}-${index}`} gap="1">
+              {index > 0 ? (
+                <Text as="span" color="fg.muted">
+                  /
+                </Text>
+              ) : null}
+              {crumb.href && !isLast ? (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="plain"
+                  h="auto"
+                  minW="0"
+                  px="0"
+                  py="0"
+                  fontWeight="normal"
+                  color="blue.fg"
+                >
+                  <Link href={crumb.href}>{crumb.label}</Link>
+                </Button>
+              ) : (
+                <Text
+                  as="span"
+                  color={isLast ? "gray.fg" : "fg.muted"}
+                  fontWeight={isLast ? "medium" : "normal"}
+                >
+                  {crumb.label}
+                </Text>
+              )}
+            </HStack>
+          );
+        })}
+      </HStack>
+    );
+  }
+  return (
+    <Text fontSize="sm" color="fg.muted">
+      {title ?? "Admin"}
+    </Text>
+  );
+}
+
+export function AppShell({ children, title, breadcrumbs }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -176,9 +245,7 @@ export function AppShell({ children, title }: Props) {
                 </Drawer.Positioner>
               </Portal>
             </Drawer.Root>
-            <Text fontSize="sm" color="fg.muted">
-              {title ?? "Admin"}
-            </Text>
+            <HeaderBreadcrumbs breadcrumbs={breadcrumbs} title={title} />
           </HStack>
           <Text fontSize="sm" fontWeight="medium" color="gray.fg">
             admin

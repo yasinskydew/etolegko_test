@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
+import { syncDisplayForCard } from "@/lib/syncDisplay";
 import { OfferCombobox } from "@/components/OfferCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
@@ -336,8 +337,24 @@ export default function StreamsEditorPage() {
     .filter((o) => !o.removed)
     .reduce((s, o) => s + o.percent, 0);
 
+  const syncUi = syncDisplayForCard(sync, company?.drift);
+
   return (
-    <AppShell title="Companies / Streams">
+    <AppShell
+      title="Streams"
+      breadcrumbs={[
+        { label: "Companies", href: "/companies" },
+        ...(company
+          ? [
+              {
+                label: company.name,
+                href: `/companies/${company.id}`,
+              },
+            ]
+          : []),
+        { label: "Streams" },
+      ]}
+    >
       <Stack gap="4">
         <Heading
           textStyle="pageTitle"
@@ -416,11 +433,8 @@ export default function StreamsEditorPage() {
                 <Heading as="h2" textStyle="md.semibold">
                   Offers
                 </Heading>
-                {sync ? (
-                  <StatusBadge
-                    label={sync === "update_mode" ? "update mode" : "synced"}
-                    tone={sync === "update_mode" ? "orange" : "green"}
-                  />
+                {syncUi ? (
+                  <StatusBadge label={syncUi.label} tone={syncUi.tone} />
                 ) : null}
               </HStack>
               <Text color="fg.muted" fontSize="sm" mb="3">
