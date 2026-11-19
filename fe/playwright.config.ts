@@ -1,22 +1,28 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const PORT = Number(process.env.PLAYWRIGHT_PORT || 3100);
+const baseURL = `http://127.0.0.1:${PORT}`;
+
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
+  workers: 1,
+  reporter: "list",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
-    ? undefined
-    : {
-        command: "npm run dev",
-        url: "http://127.0.0.1:3000",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+  webServer: {
+    command: `npm run dev -- --port ${PORT} --hostname 127.0.0.1`,
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_API_URL: "http://127.0.0.1:8000",
+    },
+  },
 });
