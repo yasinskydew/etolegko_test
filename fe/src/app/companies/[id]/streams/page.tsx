@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
-import { driftActive, syncDisplayForCard } from "@/lib/syncDisplay";
+import { syncDisplayForCard } from "@/lib/syncDisplay";
 import { OfferCombobox } from "@/components/OfferCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
@@ -334,7 +334,6 @@ export default function StreamsEditorPage() {
   if (!ready || !authed) return null;
 
   const syncUi = syncDisplayForCard(sync, company?.drift);
-  const offersInDrift = driftActive(company?.drift);
 
   return (
     <AppShell
@@ -420,7 +419,7 @@ export default function StreamsEditorPage() {
             ))}
 
             <Box
-              bg={offersInDrift ? "orange.subtle" : "bg"}
+              bg="bg"
               borderWidth="1px"
               borderColor="border.subtle"
               rounded="md"
@@ -435,17 +434,13 @@ export default function StreamsEditorPage() {
                 ) : null}
               </HStack>
               <Text color="fg.muted" fontSize="sm" mb="3">
-                Not pushed yet. Push sends active offers. Removed offers stay
+                Push sends active offers. Removed offers stay
                 in the archive. Fetch waits for Push or Cancel.
                 {dirty ? " Local queue has pending actions." : ""}
               </Text>
 
               <Box overflowX="auto">
-                <Table.Root
-                  size="sm"
-                  variant="outline"
-                  bg={offersInDrift ? "orange.subtle" : "bg"}
-                >
+                <Table.Root size="sm" variant="outline">
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeader color="fg.muted" fontSize="xs">
@@ -516,7 +511,7 @@ export default function StreamsEditorPage() {
                   }
                   onClick={() => void flushQueueThenPush()}
                 >
-                  Push
+                  Push to KT
                 </Button>
                 <Button
                   size="sm"
