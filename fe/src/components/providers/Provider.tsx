@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
 
 import { system } from "@/theme";
 
+import { StoreProvider } from "./StoreProvider";
+
 export function Provider({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider
@@ -15,7 +17,9 @@ export function Provider({ children }: { children: ReactNode }) {
       storageKey="chakra-ui-color-mode"
       disableTransitionOnChange
     >
-      <ChakraProvider value={system}>{children}</ChakraProvider>
+      <ChakraProvider value={system}>
+        <StoreProvider>{children}</StoreProvider>
+      </ChakraProvider>
     </ThemeProvider>
   );
 }
