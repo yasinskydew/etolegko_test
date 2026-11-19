@@ -190,12 +190,6 @@ export default function StreamsEditorPage() {
     }
   }
 
-  function shareHint(offer: OfferRow): string {
-    if (offer.removed) return "removed";
-    if (offer.pinned) return "pinned";
-    return "free";
-  }
-
   function renderOfferRow(offer: OfferRow) {
     const draft = percentDraft[offer.offer_id] ?? String(displayPercent(offer));
     return (
@@ -210,54 +204,45 @@ export default function StreamsEditorPage() {
         </Table.Cell>
         <Table.Cell>
           {offer.removed ? (
-            <Stack gap="0">
-              <Text fontSize="sm">0%</Text>
-              <Text fontSize="xs" color="fg.muted">
-                removed
-              </Text>
-            </Stack>
+            <Text fontSize="sm">0%</Text>
           ) : (
-            <Stack gap="0">
-              <HStack>
-                <Input
-                  size="sm"
-                  maxW="16"
-                  value={draft}
-                  aria-label={`Share for ${offer.offer_id}`}
-                  onChange={(e) =>
-                    setPercentDraft((prev) => ({
-                      ...prev,
-                      [offer.offer_id]: e.target.value,
-                    }))
-                  }
-                  onBlur={() => {
-                    const n = Number(draft);
-                    if (
-                      !Number.isInteger(n) ||
-                      n < 1 ||
-                      n > 100 ||
-                      n === offer.percent
-                    ) {
-                      setPercentDraft((prev) => {
-                        const next = { ...prev };
-                        delete next[offer.offer_id];
-                        return next;
-                      });
-                      return;
-                    }
-                    void runAction({
-                      action: "set_percent",
-                      offer_id: offer.offer_id,
-                      percent: n,
+            <HStack>
+              <Input
+                size="sm"
+                maxW="16"
+                value={draft}
+                disabled={offer.pinned}
+                aria-label={`Share for ${offer.offer_id}`}
+                onChange={(e) =>
+                  setPercentDraft((prev) => ({
+                    ...prev,
+                    [offer.offer_id]: e.target.value,
+                  }))
+                }
+                onBlur={() => {
+                  const n = Number(draft);
+                  if (
+                    !Number.isInteger(n) ||
+                    n < 1 ||
+                    n > 100 ||
+                    n === offer.percent
+                  ) {
+                    setPercentDraft((prev) => {
+                      const next = { ...prev };
+                      delete next[offer.offer_id];
+                      return next;
                     });
-                  }}
-                />
-                <Text fontSize="sm">%</Text>
-              </HStack>
-              <Text fontSize="xs" color="fg.muted">
-                {shareHint(offer)}
-              </Text>
-            </Stack>
+                    return;
+                  }
+                  void runAction({
+                    action: "set_percent",
+                    offer_id: offer.offer_id,
+                    percent: n,
+                  });
+                }}
+              />
+              <Text fontSize="sm">%</Text>
+            </HStack>
           )}
         </Table.Cell>
         <Table.Cell>
