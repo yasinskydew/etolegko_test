@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
-import { driftActive, syncDisplayForCard } from "@/lib/syncDisplay";
+import { syncDisplayForCard } from "@/lib/syncDisplay";
 import { OfferCombobox } from "@/components/OfferCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
@@ -334,7 +334,6 @@ export default function StreamsEditorPage() {
   if (!ready || !authed) return null;
 
   const syncUi = syncDisplayForCard(sync, company?.drift);
-  const offersInDrift = driftActive(company?.drift);
 
   return (
     <AppShell
@@ -420,7 +419,7 @@ export default function StreamsEditorPage() {
             ))}
 
             <Box
-              bg={offersInDrift ? "orange.subtle" : "bg"}
+              bg="bg"
               borderWidth="1px"
               borderColor="border.subtle"
               rounded="md"
@@ -441,11 +440,7 @@ export default function StreamsEditorPage() {
               </Text>
 
               <Box overflowX="auto">
-                <Table.Root
-                  size="sm"
-                  variant="outline"
-                  bg={offersInDrift ? "orange.subtle" : "bg"}
-                >
+                <Table.Root size="sm" variant="outline">
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeader color="fg.muted" fontSize="xs">
