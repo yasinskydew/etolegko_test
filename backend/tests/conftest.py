@@ -202,7 +202,7 @@ async def create_ready_company(
     client: AsyncClient,
     headers: dict[str, str],
     *,
-    name: str = "mx_beauty",
+    name: str = "test_yasinsky_company",
     geo_codes: list[str] | None = None,
     offer_id: int = 3749,
     idempotency_key: str | None = None,

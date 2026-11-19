@@ -19,7 +19,7 @@ async def test_create_idempotent_same_key_same_body(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    body = {"name": "co_idem_ok", "geo_codes": ["MX"], "offer_id": 3749}
+    body = {"name": "test_yasinsky_company_idem", "geo_codes": ["MX"], "offer_id": 3749}
     headers = {**auth_headers, "Idempotency-Key": "key-same"}
 
     first = await client.post("/companies", headers=headers, json=body)
@@ -39,14 +39,14 @@ async def test_create_idempotency_conflict_different_payload(
     first = await client.post(
         "/companies",
         headers=headers,
-        json={"name": "co_a", "geo_codes": ["MX"], "offer_id": 3749},
+        json={"name": "test_yasinsky_company_a", "geo_codes": ["MX"], "offer_id": 3749},
     )
     assert first.status_code == 201, first.text
 
     conflict = await client.post(
         "/companies",
         headers=headers,
-        json={"name": "co_b", "geo_codes": ["MX"], "offer_id": 3749},
+        json={"name": "test_yasinsky_company_b", "geo_codes": ["MX"], "offer_id": 3749},
     )
     assert conflict.status_code == 409
     assert conflict.json()["error"] == "idempotency_conflict"
@@ -64,14 +64,14 @@ async def test_create_keitaro_failure_rolls_back(
     resp = await client.post(
         "/companies",
         headers={**auth_headers, "Idempotency-Key": "key-fail"},
-        json={"name": "co_fail", "geo_codes": ["MX"], "offer_id": 3749},
+        json={"name": "test_yasinsky_company_fail", "geo_codes": ["MX"], "offer_id": 3749},
     )
     assert resp.status_code == 502
     assert resp.json()["error"] == "keitaro_bad_gateway"
 
     listed = await client.get("/companies", headers=auth_headers)
     assert listed.status_code == 200
-    assert all(item["name"] != "co_fail" for item in listed.json()["items"])
+    assert all(item["name"] != "test_yasinsky_company_fail" for item in listed.json()["items"])
 
 
 @pytest.mark.asyncio

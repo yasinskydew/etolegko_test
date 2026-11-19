@@ -66,6 +66,21 @@ class CreatedCampaign:
     offers_stream_id: int
 
 
+@dataclass
+class StreamDraft:
+    """Body of Admin API POST /streams. `campaign_id` is set by the caller."""
+
+    name: str
+    position: int
+    schema: str = "redirect"
+    stream_type: str = "regular"
+    weight: int = 100
+    action_type: str | None = None
+    action_payload: str | None = None
+    filters_geo: list[str] = field(default_factory=list)
+    offers: list[tuple[int, int]] = field(default_factory=list)
+
+
 class KeitaroClient(ABC):
     domain_id: int | None
     group_id: int | None
@@ -88,6 +103,18 @@ class KeitaroClient(ABC):
     async def get_campaign(self, campaign_id: int) -> KeitaroCampaign | None: ...
 
     @abstractmethod
+    async def create_campaign(self, *, name: str) -> KeitaroCampaign:
+        """Admin API POST /campaigns."""
+
+    @abstractmethod
+    async def create_stream(
+        self,
+        *,
+        campaign_id: int,
+        stream: StreamDraft,
+    ) -> KeitaroStream:
+        """Admin API POST /streams. Call only after the campaign create succeeds."""
+
     async def create_company_campaign(
         self,
         *,
@@ -95,7 +122,46 @@ class KeitaroClient(ABC):
         geo_codes: list[str],
         offer_id: int,
         google_url: str,
-    ) -> CreatedCampaign: ...
+    ) -> CreatedCampaign:
+        """Campaign, then google stream, then offers stream. Rolls the campaign back."""
+        google_draft = StreamDraft(
+            name="google",
+            position=1,
+            schema="redirect",
+            action_type="http",
+            action_payload=google_url,
+            filters_geo=list(geo_codes),
+        )
+        offers_draft = StreamDraft(
+            name="offers",
+            position=2,
+            schema="landings",
+            action_type="http",
+            action_payload="",
+            offers=[(offer_id, 100)],
+        )
+        validate_stream_draft(google_draft)
+        validate_stream_draft(offers_draft)
+        campaign = await self.create_campaign(name=name)
+        if campaign.campaign_id < 1:
+            raise AppError(502, "keitaro_bad_gateway", "Keitaro create campaign failed.")
+        try:
+            google = await self.create_stream(
+                campaign_id=campaign.campaign_id,
+                stream=google_draft,
+            )
+            offers = await self.create_stream(
+                campaign_id=campaign.campaign_id,
+                stream=offers_draft,
+            )
+        except AppError:
+            await self.delete_campaign(campaign.campaign_id)
+            raise
+        return CreatedCampaign(
+            campaign_id=campaign.campaign_id,
+            google_stream_id=google.stream_id,
+            offers_stream_id=offers.stream_id,
+        )
 
     @abstractmethod
     async def delete_campaign(self, campaign_id: int) -> None: ...
@@ -170,50 +236,48 @@ class NoopKeitaroClient(KeitaroClient):
     async def get_campaign(self, campaign_id: int) -> KeitaroCampaign | None:
         return self._campaigns.get(campaign_id)
 
-    async def create_company_campaign(
-        self,
-        *,
-        name: str,
-        geo_codes: list[str],
-        offer_id: int,
-        google_url: str,
-    ) -> CreatedCampaign:
+    async def create_campaign(self, *, name: str) -> KeitaroCampaign:
         cid = next(self._campaign_ids)
-        gid = next(self._stream_ids)
-        oid = next(self._stream_ids)
         camp = KeitaroCampaign(
             campaign_id=cid,
             name=name,
             state="active",
-            streams=[
-                KeitaroStream(
-                    stream_id=gid,
-                    name="google",
-                    position=1,
-                    schema="action",
-                    filters_geo=list(geo_codes),
-                    action_type="http",
-                    action_payload=google_url,
-                ),
-                KeitaroStream(
-                    stream_id=oid,
-                    name="offers",
-                    position=2,
-                    schema="offers",
-                    offers=[KeitaroOffer(offer_id=offer_id, name=None, share=100)],
-                ),
-            ],
         )
         self._campaigns[cid] = camp
-        if offer_id not in self._offers:
-            self._offers[offer_id] = KeitaroOffer(
-                offer_id=offer_id, name=f"Offer {offer_id}"
-            )
-        return CreatedCampaign(
-            campaign_id=cid,
-            google_stream_id=gid,
-            offers_stream_id=oid,
+        return camp
+
+    async def create_stream(
+        self,
+        *,
+        campaign_id: int,
+        stream: StreamDraft,
+    ) -> KeitaroStream:
+        validate_stream_draft(stream)
+        camp = self._campaigns.get(campaign_id)
+        if camp is None:
+            raise AppError(409, "campaign_missing", "Campaign not found in tracker.")
+        sid = next(self._stream_ids)
+        offers = [
+            KeitaroOffer(offer_id=offer_id, name=None, share=share)
+            for offer_id, share in stream.offers
+        ]
+        for offer_id, _share in stream.offers:
+            if offer_id not in self._offers:
+                self._offers[offer_id] = KeitaroOffer(
+                    offer_id=offer_id, name=f"Offer {offer_id}"
+                )
+        row = KeitaroStream(
+            stream_id=sid,
+            name=stream.name,
+            position=stream.position,
+            schema=stream.schema,
+            filters_geo=list(stream.filters_geo),
+            offers=offers,
+            action_type=stream.action_type,
+            action_payload=stream.action_payload,
         )
+        camp.streams.append(row)
+        return row
 
     async def delete_campaign(self, campaign_id: int) -> None:
         self._campaigns.pop(campaign_id, None)
@@ -501,15 +565,8 @@ class HttpKeitaroClient(KeitaroClient):
             action_payload=action_payload,
         )
 
-    async def create_company_campaign(
-        self,
-        *,
-        name: str,
-        geo_codes: list[str],
-        offer_id: int,
-        google_url: str,
-    ) -> CreatedCampaign:
-        campaign = await self._request(
+    async def create_campaign(self, *, name: str) -> KeitaroCampaign:
+        raw = await self._request(
             "POST",
             "/campaigns",
             json={
@@ -522,52 +579,32 @@ class HttpKeitaroClient(KeitaroClient):
                 "state": "active",
             },
         )
-        campaign_id = int(campaign["id"])
-        try:
-            google = await self._request(
-                "POST",
-                f"/campaigns/{campaign_id}/streams",
-                json={
-                    "campaign_id": campaign_id,
-                    "name": "google",
-                    "type": "regular",
-                    "position": 1,
-                    "weight": 100,
-                    "schema": "action",
-                    "action_type": "http",
-                    "action_payload": google_url,
-                    "filters": [
-                        {
-                            "name": "country",
-                            "mode": "accept",
-                            "payload": geo_codes,
-                        }
-                    ],
-                    "offers": [],
-                },
-            )
-            offers = await self._request(
-                "POST",
-                f"/campaigns/{campaign_id}/streams",
-                json={
-                    "campaign_id": campaign_id,
-                    "name": "offers",
-                    "type": "regular",
-                    "position": 2,
-                    "weight": 100,
-                    "schema": "offers",
-                    "filters": [],
-                    "offers": [{"offer_id": offer_id, "share": 100, "state": "active"}],
-                },
-            )
-        except AppError:
-            await self.delete_campaign(campaign_id)
-            raise
-        return CreatedCampaign(
-            campaign_id=campaign_id,
-            google_stream_id=int(google["id"]),
-            offers_stream_id=int(offers["id"]),
+        if not isinstance(raw, dict) or "id" not in raw:
+            raise AppError(502, "keitaro_bad_gateway", "Keitaro create campaign failed.")
+        state = "active"
+        if raw.get("state") == "disabled" or raw.get("status") == "disabled":
+            state = "disabled"
+        return KeitaroCampaign(
+            campaign_id=int(raw["id"]),
+            name=str(raw.get("name") or name),
+            state=state,
         )
+
+    async def create_stream(
+        self,
+        *,
+        campaign_id: int,
+        stream: StreamDraft,
+    ) -> KeitaroStream:
+        validate_stream_draft(stream)
+        raw = await self._request(
+            "POST",
+            "/streams",
+            json=_stream_body(campaign_id, stream),
+        )
+        if not isinstance(raw, dict) or "id" not in raw:
+            raise AppError(502, "keitaro_bad_gateway", "Keitaro create stream failed.")
+        return self._parse_stream(raw)
 
     async def delete_campaign(self, campaign_id: int) -> None:
         await self._request("DELETE", f"/campaigns/{campaign_id}")
@@ -644,6 +681,61 @@ class HttpKeitaroClient(KeitaroClient):
             uniques=_as_int(row.get("campaign_unique_clicks") or row.get("uniques")),
             bots=_as_int(row.get("bots")),
         )
+
+
+def validate_stream_draft(stream: StreamDraft) -> None:
+    if stream.name == "google" and not stream.filters_geo:
+        raise AppError(
+            422,
+            "validation_error",
+            "Google stream requires a geo list.",
+            fields={"geo_codes": "Add at least one geo code."},
+        )
+    if stream.name != "offers":
+        return
+    if not stream.offers:
+        raise AppError(
+            422,
+            "validation_error",
+            "Offers stream requires at least one offer.",
+            fields={"offer_id": "Pick an offer."},
+        )
+    for offer_id, _share in stream.offers:
+        if offer_id < 1:
+            raise AppError(
+                422,
+                "validation_error",
+                "Offers stream requires at least one offer.",
+                fields={"offer_id": "Pick an offer."},
+            )
+
+
+def _stream_body(campaign_id: int, stream: StreamDraft) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "campaign_id": campaign_id,
+        "name": stream.name,
+        "type": stream.stream_type,
+        "position": stream.position,
+        "weight": stream.weight,
+        "schema": stream.schema,
+        "action_type": stream.action_type or "http",
+        "filters": [],
+        "offers": [
+            {"offer_id": offer_id, "share": share, "state": "active"}
+            for offer_id, share in stream.offers
+        ],
+    }
+    if stream.filters_geo:
+        body["filters"] = [
+            {
+                "name": "country",
+                "mode": "accept",
+                "payload": list(stream.filters_geo),
+            }
+        ]
+    if stream.action_payload is not None:
+        body["action_payload"] = stream.action_payload
+    return body
 
 
 def _as_int(value: Any) -> int | None:

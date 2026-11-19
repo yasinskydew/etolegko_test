@@ -15,7 +15,7 @@ async def test_parallel_actions_same_version_one_conflicts(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="race_ver")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_race")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
     version = company["version"]

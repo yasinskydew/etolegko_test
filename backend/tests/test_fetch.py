@@ -15,7 +15,7 @@ async def test_fetch_synced_writes_snapshot_without_normalizing_shares(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="fetch_sync")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_fetch_sync")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
     version = company["version"]
@@ -33,7 +33,7 @@ async def test_fetch_synced_writes_snapshot_without_normalizing_shares(
 
     camp_id = next(iter(mock_keitaro._campaigns))
     camp = mock_keitaro._campaigns[camp_id]
-    offers_k = next(s for s in camp.streams if s.schema == "offers")
+    offers_k = next(s for s in camp.streams if s.name == "offers")
     # Uneven shares that still sum to 100 — must NOT be redistributed to 50/50.
     offers_k.offers = [
         KeitaroOffer(offer_id=3749, name=None, share=70),
@@ -53,7 +53,7 @@ async def test_fetch_blocked_in_update_mode(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="fetch_block")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_fetch_block")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
 
@@ -80,13 +80,13 @@ async def test_fetch_unknown_geo_422(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="fetch_geo")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_fetch_geo")
     cid = company["id"]
     assert offers_stream(company)["sync"] == "synced"
 
     camp_id = next(iter(mock_keitaro._campaigns))
     camp = mock_keitaro._campaigns[camp_id]
-    google = next(s for s in camp.streams if s.schema == "action")
+    google = next(s for s in camp.streams if s.schema == "redirect")
     google.filters_geo = ["ZZ"]
 
     resp = await client.post(f"/companies/{cid}/fetch", headers=auth_headers)

@@ -15,7 +15,7 @@ async def test_push_idempotent_and_keeps_removed_archive(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="push_idem")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_push_idem")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
     version = company["version"]
@@ -63,7 +63,7 @@ async def test_push_keitaro_failure_keeps_update_mode_and_old_snapshot(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="push_fail")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_push_fail")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
     version = company["version"]
@@ -108,7 +108,7 @@ async def test_cancel_restores_snapshot_without_keitaro(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="cancel_ok")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_cancel")
     cid = company["id"]
     stream_id = offers_stream(company)["id"]
     snapshot = offers_stream(company)["offers"]

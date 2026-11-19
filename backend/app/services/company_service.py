@@ -52,7 +52,9 @@ from app.services.weight_util import OfferWeight, WeightError
 
 logger = logging.getLogger(__name__)
 
+NAME_PREFIX = "test_yasinsky_company"
 NAME_RE = re.compile(r"^[a-zA-Z0-9_\- ]{1,64}$")
+GEO_RE = re.compile(r"^[A-Z]{2}$")
 
 
 class CompanyService:
@@ -129,7 +131,8 @@ class CompanyService:
                 422, "validation_error", "Idempotency-Key header is required."
             )
         self._validate_name(body.name)
-        await self._validate_geo_codes(body.geo_codes)
+        body.geo_codes = await self._validate_geo_codes(body.geo_codes)
+        self._validate_offer_id(body.offer_id)
 
         payload_hash = self._payload_hash(body)
         existing_key = await self._idempotency.get(idempotency_key)
@@ -606,7 +609,7 @@ class CompanyService:
             raise AppError(409, "version_conflict", "expected_version mismatch.")
         if company.lifecycle != CompanyLifecycle.ready:
             raise AppError(409, "validation_error", "Company is still creating.")
-        await self._validate_geo_codes(body.geo_codes)
+        body.geo_codes = await self._validate_geo_codes(body.geo_codes)
         if company.keitaro_campaign_id is None:
             raise AppError(409, "campaign_missing", "Campaign missing in tracker.")
 
@@ -688,17 +691,54 @@ class CompanyService:
         else:
             await self._session.commit()
 
-    async def _validate_geo_codes(self, codes: list[str]) -> None:
+    async def _validate_geo_codes(self, codes: list[str]) -> list[str]:
         if not codes:
-            raise AppError(422, "validation_error", "geo_codes must not be empty.")
-        found = await self._geos.get_by_codes(codes)
+            raise AppError(
+                422,
+                "validation_error",
+                "geo_codes must not be empty.",
+                fields={"geo_codes": "Add at least one geo code."},
+            )
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw in codes:
+            code = raw.strip().upper()
+            if not GEO_RE.fullmatch(code):
+                raise AppError(
+                    422,
+                    "validation_error",
+                    "Invalid geo code.",
+                    fields={"geo_codes": "Use 2-letter codes from the geo list."},
+                )
+            if code in seen:
+                raise AppError(
+                    422,
+                    "validation_error",
+                    "Duplicate geo code.",
+                    fields={"geo_codes": f"{code} is listed more than once."},
+                )
+            seen.add(code)
+            normalized.append(code)
+        found = await self._geos.get_by_codes(normalized)
         found_codes = {g.code for g in found}
-        unknown = [c for c in codes if c not in found_codes]
+        unknown = [c for c in normalized if c not in found_codes]
         if unknown:
             raise AppError(
                 422,
                 "unknown_geo",
                 f"Unknown geo codes: {', '.join(unknown)}",
+                fields={"geo_codes": "Unknown geo code."},
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_offer_id(offer_id: int) -> None:
+        if offer_id < 1:
+            raise AppError(
+                422,
+                "validation_error",
+                "offer_id is required.",
+                fields={"offer_id": "Pick an offer."},
             )
 
     @staticmethod
@@ -710,12 +750,14 @@ class CompanyService:
                 "Name must not have leading/trailing spaces.",
                 fields={"name": "Invalid name."},
             )
-        if not NAME_RE.fullmatch(name):
+        if not NAME_RE.fullmatch(name) or not name.startswith(NAME_PREFIX):
             raise AppError(
                 422,
                 "validation_error",
                 "Invalid company name.",
-                fields={"name": "1-64 chars: letters, digits, _ - space."},
+                fields={
+                    "name": "Must start with test_yasinsky_company. 1-64 chars: letters, digits, _ - space."
+                },
             )
 
     @staticmethod

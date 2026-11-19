@@ -23,7 +23,7 @@ async def test_disable_keitaro_first_success_preserves_shares(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="traf_ok")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_traf_ok")
     shares_before = _share_map(company)
 
     resp = await client.post(
@@ -45,7 +45,7 @@ async def test_disable_keitaro_failure_leaves_local_unchanged(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="traf_fail")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_traf_fail")
     shares_before = _share_map(company)
     mock_keitaro.fail_disable = AppError(
         502, "keitaro_bad_gateway", "disable failed"
@@ -72,7 +72,7 @@ async def test_enable_after_disable(
     auth_headers: dict[str, str],
     mock_keitaro: MockKeitaroClient,
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="traf_en")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_traf_en")
     disabled = await client.post(
         f"/companies/{company['id']}/disable",
         headers=auth_headers,

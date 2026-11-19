@@ -56,7 +56,7 @@ CREATE UNIQUE INDEX company_keitaro_campaign_uidx
   WHERE keitaro_campaign_id IS NOT NULL;
 ```
 
-`lifecycle = creating` допустим и с уже записанным `keitaro_campaign_id`: это зависшая компенсация, её дочищает reconcile.
+`lifecycle = creating` допустим и с уже записанным `keitaro_campaign_id`: это зависшая компенсация. Фонового reconcile нет, редактор для такой строки закрыт.
 
 ## `company_geo`
 

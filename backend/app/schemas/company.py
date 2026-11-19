@@ -54,7 +54,9 @@ class CompanyOut(BaseModel):
     """Full company card / editor payload."""
 
     id: int
-    name: str = Field(description="Company name as stored and sent to Keitaro (no prefix).")
+    name: str = Field(
+        description="Company name as stored and sent to Keitaro. Create requires the test_yasinsky_company prefix."
+    )
     lifecycle: CompanyLifecycle = Field(description="`creating` | `ready`.")
     version: int = Field(description="Optimistic lock counter; send as expected_version.")
     traffic_status: TrafficStatus = Field(description="`active` | `disabled`.")
@@ -99,16 +101,20 @@ class CreateCompanyRequest(BaseModel):
     """Create company + Keitaro campaign with google + offers streams."""
 
     name: str = Field(
-        description="1–64 chars `[a-zA-Z0-9_\\- ]`, no leading/trailing spaces.",
-        examples=["mx_beauty"],
+        description=(
+            "Must start with `test_yasinsky_company`. "
+            "1–64 chars `[a-zA-Z0-9_\\- ]`, no leading/trailing spaces."
+        ),
+        examples=["test_yasinsky_company"],
     )
     geo_codes: list[str] = Field(
         min_length=1,
-        description="Non-empty list of codes present in `geo` table.",
+        description="Non-empty unique 2-letter codes present in `geo`.",
         examples=[["MX", "AU", "RO"]],
     )
     offer_id: int = Field(
-        description="Initial offers-stream participant; gets 100% share.",
+        ge=1,
+        description="Initial offers-stream participant; at least one offer, gets 100% share.",
         examples=[3749],
     )
 

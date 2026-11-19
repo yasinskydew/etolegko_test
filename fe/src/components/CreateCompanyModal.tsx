@@ -22,7 +22,7 @@ type Props = {
   onCreated?: (companyId: number) => void;
 };
 
-const NAME_RE = /^[a-zA-Z0-9_\- ]{1,64}$/;
+const NAME_RE = /^test_yasinsky_company[a-zA-Z0-9_\- ]{0,42}$/;
 
 export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
   const [name, setName] = useState("");
@@ -45,7 +45,9 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
     setNameError(null);
     const trimmed = name.trim();
     if (!NAME_RE.test(trimmed) || trimmed !== name.trim()) {
-      setNameError("Name: 1–64 chars, letters, digits, _ - space; no edge spaces.");
+      setNameError(
+        "Name must start with test_yasinsky_company. 1–64 chars, letters, digits, _ - space.",
+      );
       return;
     }
     const geo_codes = geos
@@ -54,6 +56,14 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       .filter(Boolean);
     if (geo_codes.length === 0) {
       setLocalError("Add at least one geo code.");
+      return;
+    }
+    if (geo_codes.some((code) => !/^[A-Z]{2}$/.test(code))) {
+      setLocalError("Geo codes must be 2 letters, for example MX, AU.");
+      return;
+    }
+    if (new Set(geo_codes).size !== geo_codes.length) {
+      setLocalError("Geo codes must be unique.");
       return;
     }
     if (!offer) {
@@ -110,7 +120,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Company name"
+                    placeholder="test_yasinsky_company"
                   />
                   {nameError ? <Field.ErrorText>{nameError}</Field.ErrorText> : null}
                 </Field.Root>

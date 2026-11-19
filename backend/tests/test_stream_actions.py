@@ -17,7 +17,7 @@ async def test_action_version_conflict(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="act_ver")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_act_ver")
     stream = offers_stream(company)
 
     resp = await client.post(
@@ -38,7 +38,7 @@ async def test_set_percent_last_free_forbidden(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="act_last_free")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_act_last")
     stream = offers_stream(company)
     version = company["version"]
 
@@ -62,7 +62,7 @@ async def test_restore_clears_pin(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="act_restore")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_act_restore")
     stream_id = offers_stream(company)["id"]
     cid = company["id"]
     version = company["version"]
@@ -112,7 +112,7 @@ async def test_add_active_offer_twice_422(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
-    company = await create_ready_company(client, auth_headers, name="act_dup")
+    company = await create_ready_company(client, auth_headers, name="test_yasinsky_company_act_dup")
     stream = offers_stream(company)
 
     resp = await client.post(
