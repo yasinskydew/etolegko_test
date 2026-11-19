@@ -7,7 +7,7 @@
 | 1. Postgres | done | 2026-11-19 |
 | 2. Заглушка backend | done | 2026-11-19 |
 | 3. Доступ к базе | done | 2026-11-19 |
-| 4. Alembic | pending | — |
+| 4. Alembic | done | 2026-11-19 |
 | 5. Миграция | pending | — |
 | 6. JWT | pending | — |
 | 7. Домен | pending | — |
@@ -84,15 +84,20 @@
 
 ## Фаза 4. Alembic
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `alembic` в `requirements.txt`
+- `backend/alembic.ini`, `backend/alembic/env.py` — async, `Base.metadata` + `DATABASE_URL`
+- `backend/alembic/versions/` — пусто (без ревизий)
+- `alembic upgrade head` → exit 0 на пустой базе
 
 ### Комментарии
 
-—
+- Ревизии схемы — фаза 5
+- `env.py` через `async_engine_from_config` + `run_sync`
 
 ---
 
