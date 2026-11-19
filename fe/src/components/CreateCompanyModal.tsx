@@ -96,16 +96,12 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
         <Dialog.Positioner>
           <Dialog.Content bg="bg" rounded="xl" maxW="480px" p="6" gap="4">
             <Dialog.Header p="0" mb="0">
-              <Dialog.Title
-                fontSize="xl"
-                fontWeight="semibold"
-                color="gray.fg"
-              >
+              <Dialog.Title textStyle="cardTitle" color="gray.fg">
                 New company
               </Dialog.Title>
             </Dialog.Header>
             <Dialog.Body p="0">
-              <Text color="fg.muted" mb="4" fontSize="sm" fontWeight="semibold">
+              <Text color="fg.muted" mb="4" textStyle="sm.medium">
                 One offer, 100%. Domain, group and source are set by the server.
               </Text>
               <Stack gap="4">

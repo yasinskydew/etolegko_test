@@ -340,8 +340,7 @@ export default function StreamsEditorPage() {
     <AppShell title="Companies / Streams">
       <Stack gap="4">
         <Heading
-          fontSize="2xl"
-          fontWeight="semibold"
+          textStyle="pageTitle"
           color="gray.fg"
           fontFamily="heading"
         >
@@ -376,7 +375,7 @@ export default function StreamsEditorPage() {
               rounded="md"
               p="4"
             >
-              <Heading as="h2" fontSize="md" fontWeight="semibold" mb="2">
+              <Heading as="h2" textStyle="md.semibold" mb="2">
                 Google
               </Heading>
               <Text color="fg.muted" fontSize="sm">
@@ -397,7 +396,7 @@ export default function StreamsEditorPage() {
                 rounded="md"
                 p="4"
               >
-                <Heading as="h2" fontSize="md" fontWeight="semibold">
+                <Heading as="h2" textStyle="md.semibold">
                   Plain #{s.position}
                 </Heading>
                 <Text color="fg.muted" fontSize="sm">
@@ -414,7 +413,7 @@ export default function StreamsEditorPage() {
               p="4"
             >
               <HStack justify="space-between" mb="2" flexWrap="wrap" gap="2">
-                <Heading as="h2" fontSize="md" fontWeight="semibold">
+                <Heading as="h2" textStyle="md.semibold">
                   Offers
                 </Heading>
                 {sync ? (

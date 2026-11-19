@@ -107,15 +107,10 @@ export default function CompanyCardPage() {
         {company ? (
           <>
             <Stack gap="2">
-              <Heading
-                fontSize="2xl"
-                fontWeight="semibold"
-                color="gray.fg"
-                fontFamily="heading"
-              >
+              <Heading textStyle="pageTitle" color="gray.fg">
                 {company.name}
               </Heading>
-              <Text color="fg.muted" fontSize="sm">
+              <Text color="fg.muted" textStyle="muted">
                 version {company.version} · {company.lifecycle}
               </Text>
               <HStack gap="2" flexWrap="wrap">
@@ -217,7 +212,7 @@ export default function CompanyCardPage() {
             </Box>
 
             <Stack gap="2">
-              <Heading as="h2" fontSize="md" fontWeight="medium" color="gray.fg">
+              <Heading as="h2" textStyle="sm.medium" color="gray.fg">
                 Streams
               </Heading>
               <Box

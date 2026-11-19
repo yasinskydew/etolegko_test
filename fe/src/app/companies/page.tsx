@@ -60,15 +60,10 @@ export default function CompaniesPage() {
       <Stack gap="4">
         <HStack justify="space-between" align="start" flexWrap="wrap" gap="3">
           <Stack gap="1">
-            <Heading
-              size="xl"
-              fontWeight="semibold"
-              color="gray.fg"
-              fontFamily="heading"
-            >
+            <Heading textStyle="pageTitle" color="gray.fg">
               Companies
             </Heading>
-            <Text color="fg.muted" fontSize="sm">
+            <Text color="fg.muted" textStyle="muted">
               Only companies stored in this app
             </Text>
           </Stack>

@@ -77,10 +77,10 @@ function SidebarBody({
   return (
     <Flex direction="column" h="full" px="3" py="5" gap="1">
       <Box mb="3">
-        <Heading as="p" fontSize="md" fontWeight="semibold" color="blue.fg">
+        <Heading as="p" textStyle="md.semibold" color="blue.fg">
           etolegko
         </Heading>
-        <Text fontSize="xs" color="fg.muted">
+        <Text textStyle="xs" color="fg.muted">
           Admin
         </Text>
       </Box>

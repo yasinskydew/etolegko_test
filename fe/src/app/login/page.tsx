@@ -54,10 +54,10 @@ export default function LoginPage() {
         as="aside"
         aria-label="Brand"
       >
-        <Heading as="h1" fontSize="3xl" fontWeight="semibold" color="blue.fg">
+        <Heading as="h1" textStyle="brand" color="blue.fg">
           etolegko
         </Heading>
-        <Text fontSize="md" color="blue.fg">
+        <Text textStyle="brand.subtitle" color="blue.fg">
           Campaigns, streams, and offer weights
         </Text>
       </Flex>
@@ -82,13 +82,7 @@ export default function LoginPage() {
           w="full"
           maxW="380px"
         >
-          <Heading
-            as="h2"
-            fontSize="xl"
-            fontWeight="semibold"
-            color="gray.fg"
-            mb="1"
-          >
+          <Heading as="h2" textStyle="cardTitle" color="gray.fg" mb="1">
             <Box as="span" display={{ base: "inline", md: "none" }}>
               etolegko
             </Box>
@@ -96,7 +90,7 @@ export default function LoginPage() {
               Sign in
             </Box>
           </Heading>
-          <Text color="fg.muted" fontSize="sm" mb="4">
+          <Text color="fg.muted" textStyle="muted" mb="4">
             Username and password
           </Text>
           <Stack gap="3.5">
@@ -122,7 +116,7 @@ export default function LoginPage() {
               />
             </Field.Root>
             {error ? (
-              <Text color="fg.error" fontSize="sm">
+              <Text color="fg.error" textStyle="sm">
                 {error}
               </Text>
             ) : null}

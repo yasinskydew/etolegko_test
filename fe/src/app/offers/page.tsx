@@ -43,15 +43,10 @@ export default function OffersPage() {
     <AppShell title="Offers">
       <Stack gap="4">
         <Stack gap="1">
-          <Heading
-            size="xl"
-            fontWeight="semibold"
-            color="gray.fg"
-            fontFamily="heading"
-          >
+          <Heading textStyle="pageTitle" color="gray.fg">
             Offers
           </Heading>
-          <Text color="fg.muted" fontSize="sm">
+          <Text color="fg.muted" textStyle="muted">
             Read-only catalog from Keitaro
           </Text>
         </Stack>
