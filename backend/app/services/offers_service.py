@@ -10,6 +10,11 @@ class OffersService:
         items = await self._keitaro.list_offers(q)
         return OfferCatalogResponse(
             items=[
-                OfferCatalogItem(offer_id=o.offer_id, name=o.name) for o in items
+                OfferCatalogItem(
+                    offer_id=o.offer_id,
+                    name=o.name,
+                    country=list(o.country),
+                )
+                for o in items
             ]
         )

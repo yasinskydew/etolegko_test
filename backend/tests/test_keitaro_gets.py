@@ -224,12 +224,14 @@ async def test_find_campaign_by_name_paginates() -> None:
 @pytest.mark.asyncio
 async def test_list_offers_uses_as_list_and_filter() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path.endswith("/offers")
         return httpx.Response(
             200,
             json={
                 "rows": [
-                    {"id": 1, "name": "Alpha"},
-                    {"id": 2, "name": "Beta"},
+                    {"id": 1, "name": "Alpha", "country": ["MX", "US"]},
+                    {"id": 2, "name": "Beta", "country": ["DE"]},
                 ]
             },
         )
@@ -239,6 +241,7 @@ async def test_list_offers_uses_as_list_and_filter() -> None:
         items = await client.list_offers(q="alp")
         assert len(items) == 1
         assert items[0].offer_id == 1
+        assert items[0].country == ["MX", "US"]
     finally:
         await client.aclose()
 

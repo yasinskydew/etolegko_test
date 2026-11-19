@@ -8,6 +8,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -28,6 +29,7 @@ class KeitaroOffer:
     offer_id: int
     name: str | None
     share: int = 0
+    country: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -138,10 +140,9 @@ class NoopKeitaroClient(KeitaroClient):
         self.source_id = 1
         self.noop = True
         self._campaigns: dict[int, KeitaroCampaign] = {}
-        self._offers: dict[int, KeitaroOffer] = {
-            3749: KeitaroOffer(offer_id=3749, name="Miaflow BEAUTY"),
-            3801: KeitaroOffer(offer_id=3801, name="Demo Offer 2"),
-        }
+        # Catalog is empty in noop: GET /offers must not invent Keitaro rows.
+        # get_offer / create may still synthesize ids for offline company tests.
+        self._offers: dict[int, KeitaroOffer] = {}
         # Avoid collisions after process restart when DB already has prior mock ids.
         base = int(time.time()) % 1_000_000_000
         self._campaign_ids = itertools.count(base + 1)
@@ -151,11 +152,9 @@ class NoopKeitaroClient(KeitaroClient):
         logger.warning("KEITARO_URL empty — NoopKeitaroClient (mock mode)")
 
     async def list_offers(self, q: str | None = None) -> list[KeitaroOffer]:
-        items = list(self._offers.values())
-        if q:
-            ql = q.lower()
-            items = [o for o in items if o.name and ql in o.name.lower()]
-        return items
+        # No local catalog stub — real list comes from HttpKeitaroClient GET /offers.
+        _ = q
+        return []
 
     async def get_offer(self, offer_id: int) -> KeitaroOffer | None:
         return self._offers.get(offer_id) or KeitaroOffer(
@@ -396,15 +395,13 @@ class HttpKeitaroClient(KeitaroClient):
         return collected
 
     async def list_offers(self, q: str | None = None) -> list[KeitaroOffer]:
+        """Admin API GET /offers — full catalog (id, name, country)."""
         data = await self._request("GET", "/offers", retry=True)
         items: list[KeitaroOffer] = []
         for row in _as_list(data):
-            if not isinstance(row, dict) or "id" not in row:
+            offer = _parse_offer_row(row)
+            if offer is None:
                 continue
-            offer = KeitaroOffer(
-                offer_id=int(row["id"]),
-                name=row.get("name"),
-            )
             self._offer_cache[offer.offer_id] = offer
             items.append(offer)
         if q:
@@ -421,9 +418,9 @@ class HttpKeitaroClient(KeitaroClient):
             if exc.error == KEITARO_NOT_FOUND:
                 return None
             raise
-        if not data or not isinstance(data, dict):
+        offer = _parse_offer_row(data)
+        if offer is None:
             return None
-        offer = KeitaroOffer(offer_id=int(data["id"]), name=data.get("name"))
         self._offer_cache[offer_id] = offer
         return offer
 
@@ -674,6 +671,39 @@ def _as_list(value: Any) -> list[Any]:
     return []
 
 
+def _parse_country(value: Any) -> list[str]:
+    """Offer.country is string[] in Admin API; tolerate CSV / single string."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        return [part.strip() for part in text.split(",") if part.strip()]
+    return [str(value).strip()] if str(value).strip() else []
+
+
+def _parse_offer_row(row: Any) -> KeitaroOffer | None:
+    """Map Admin API Offer object → KeitaroOffer."""
+    if not isinstance(row, dict) or "id" not in row:
+        return None
+    name = row.get("name")
+    return KeitaroOffer(
+        offer_id=int(row["id"]),
+        name=str(name) if name is not None else None,
+        country=_parse_country(row.get("country")),
+    )
+
+
 def _parse_filter_payload(payload: Any) -> list[str]:
     """Filter.payload is a string in OpenAPI (CSV or JSON-array string)."""
     if payload is None:
@@ -724,7 +754,28 @@ def _map_keitaro_http_error(response: httpx.Response) -> AppError:
 _keitaro_singleton: KeitaroClient | None = None
 
 
+def _load_repo_dotenv() -> None:
+    """Best-effort load of repo-root `.env` without overriding existing env."""
+    try:
+        root = Path(__file__).resolve().parents[3]
+    except IndexError:
+        return
+    env_path = root / ".env"
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip('"').strip("'")
+
+
 def build_keitaro_client() -> KeitaroClient:
+    _load_repo_dotenv()
     url = (os.environ.get("KEITARO_URL") or "").strip()
     if not url:
         return NoopKeitaroClient()
