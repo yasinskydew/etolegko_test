@@ -360,19 +360,32 @@ export default function StreamsEditorPage() {
           Streams
         </Heading>
 
-        {companyQuery.isError ? (
-          <Text color="fg.error">{getErrorMessage(companyQuery.error)}</Text>
-        ) : null}
-        {error ? (
-          <Text color="fg.error" fontSize="sm">
-            {error}
-          </Text>
-        ) : null}
-        {message ? (
-          <Text color="fg.muted" fontSize="sm">
-            {message}
-          </Text>
-        ) : null}
+        <Box
+          minH="2.75rem"
+          aria-live="polite"
+          display="flex"
+          alignItems="flex-start"
+        >
+          {companyQuery.isError ? (
+            <Text color="fg.error" fontSize="sm" lineClamp={2}>
+              {getErrorMessage(companyQuery.error)}
+            </Text>
+          ) : error ? (
+            <Text color="fg.error" fontSize="sm" lineClamp={2}>
+              {error}
+            </Text>
+          ) : (
+            <Text
+              color="fg.muted"
+              fontSize="sm"
+              lineClamp={2}
+              visibility={message ? "visible" : "hidden"}
+              aria-hidden={!message}
+            >
+              {message || "\u00A0"}
+            </Text>
+          )}
+        </Box>
 
         {company ? (
           <>
@@ -436,7 +449,9 @@ export default function StreamsEditorPage() {
               <Text color="fg.muted" fontSize="sm" mb="3">
                 Push sends active offers. Removed offers stay
                 in the archive. Fetch waits for Push or Cancel.
-                {dirty ? " Local queue has pending actions." : ""}
+                {dirty && sync !== "update_mode"
+                  ? " Local queue has pending actions."
+                  : ""}
               </Text>
 
               <Box overflowX="auto">
@@ -468,7 +483,7 @@ export default function StreamsEditorPage() {
                 </Table.Root>
               </Box>
 
-              {queueItems.length ? (
+              {queueItems.length && sync !== "update_mode" ? (
                 <Text mt="3" fontSize="sm" color="fg.muted">
                   queue {queueItems.length}
                 </Text>
