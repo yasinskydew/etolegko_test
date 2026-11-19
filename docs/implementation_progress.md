@@ -8,14 +8,14 @@
 | 2. Заглушка backend | done | 2026-11-19 |
 | 3. Доступ к базе | done | 2026-11-19 |
 | 4. Alembic | done | 2026-11-19 |
-| 5. Миграция | pending | — |
-| 6. JWT | pending | — |
-| 7. Домен | pending | — |
-| 8. Пустой frontend | pending | — |
-| 9. RTK Query | pending | — |
-| 10. Базовые компоненты | pending | — |
-| 11. Страницы | pending | — |
-| 12. Тестирование | pending | — |
+| 5. Миграция | done | 2026-11-19 |
+| 6. JWT | done | 2026-11-19 |
+| 7. Домен | done | 2026-11-19 |
+| 8. Пустой frontend | done | 2026-11-19 |
+| 9. RTK Query | done | 2026-11-19 |
+| 10. Базовые компоненты | done | 2026-11-19 |
+| 11. Страницы | done | 2026-11-19 |
+| 12. Тестирование | done | 2026-11-19 |
 
 ---
 
@@ -103,110 +103,158 @@
 
 ## Фаза 5. Миграция
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- SQLAlchemy модели: `User` (`"user"`), `Geo`, `Company`, `CompanyGeo`, `IdempotencyKey`, `Stream`, `StreamOffer`, `StreamOfferSnapshot` + enums
+- Alembic ревизия `20261119185515_initial_schema`: enums, таблицы, частичные UNIQUE индексы
+- Seed: 50 geo (MX,AU,RO,US,GB,…); admin из `ADMIN_USERNAME`/`ADMIN_PASSWORD` (bcrypt)
+- CRUD-репозитории через конструктор DI
+- Dockerfile: `alembic/` + `alembic.ini`, `entrypoint.sh` → `alembic upgrade head` затем uvicorn
+- compose: `DATABASE_URL` override на host `postgres`
 
 ### Комментарии
 
-—
+- Локально `alembic upgrade head` на `localhost` Postgres — ok
+- Enum create_type=False, чтобы не дублировать CREATE TYPE
 
 ---
 
 ## Фаза 6. JWT
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `POST /auth/login` → `{access_token, token_type}`; пароль только bcrypt-hash
+- Bearer JWT на всех маршрутах кроме login и `/health`
+- 401 `{error:"unauthorized", message}` при неверной паре / без токена
+- PyJWT + bcrypt
 
 ### Комментарии
 
-—
+- Logout сервером не хранится
 
 ---
 
 ## Фаза 7. Домен
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- 7.1 `WeightUtil` + pytest (11 tests): хвост 34/33/33, pin, restore снимает pin, пустой поток, запрет set_percent последнего свободного
+- 7.2 `KeitaroClient` (Protocol/ABC, httpx): таймауты; ретраи на чтение и повторный Push; resolve domain/group/source при старте
+- 7.3–7.6 Companies CRUD/actions/Push/Cancel/Fetch/geo/enable/disable/stats/`GET /offers`/drift
+- Optimistic lock `version` + `SELECT … FOR UPDATE`; ошибки `{error, message}`
 
 ### Комментарии
 
-—
+- **Keitaro noop mode:** если `KEITARO_URL` пуст — `NoopKeitaroClient`, resolve не падает (для локальной разработки без credentials). При непустом URL отсутствие domain/group/source → падение на старте (как в system-design).
+- Реальный Keitaro не проверялся (URL/ключ пустые в `.env`).
+- Фоновый reconcile `creating` не реализован (не требовался явно в 7.x).
 
 ---
 
 ## Фаза 8. Пустой frontend
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `fe/` — Next.js 15 App Router, TypeScript, client render
+- `ChakraProvider` + `ColorModeScript` (светлая тема по умолчанию через next-themes)
+- Минимальная homepage-shell; API-страниц нет
+- `fe/Dockerfile` (standalone), сервис `frontend` в `docker-compose.yml` на `:3000`
+- `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` в `.env.example`
+- Зависимости: next, react, `@chakra-ui/react` v3, `@reduxjs/toolkit`, `react-redux`
 
 ### Комментарии
 
-—
+- Без `NAME_PREFIX` / `GET /config`
+- Backend не менялся
 
 ---
 
 ## Фаза 9. RTK Query
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Один API slice `fe/src/store/api.ts` → `NEXT_PUBLIC_API_URL`
+- JWT в `localStorage` (`etolegko:jwt`), отдельно от очереди
+- Очередь `company:{id}:tab:{tabId}` в `fe/src/lib/actionQueue.ts` — вне RTK
+- Теги: `companies`, `company`, `offers`, `stats`; инвалидация после мутаций
 
 ### Комментарии
 
-—
+- `tabId` в `sessionStorage`, чтобы вкладки не пересекались
 
 ---
 
 ## Фаза 10. Базовые компоненты
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Тема `fe/src/theme/index.ts`: семантические токены `bg.subtle` / `bg` / `gray.fg` / blue / cyan
+- `AppShell` (sidebar Companies/Offers; streams только из карточки), Drawer на `base`, `md` 200px, `lg` 240px
+- `TrafficToggle`, `CreateCompanyModal`, `OfferCombobox`, `DriftAlert`, `StatusBadge`, `PagePagination`
 
 ### Комментарии
 
-—
+- Свои hex/CSS не писались; UI на Chakra v3
 
 ---
 
 ## Фаза 11. Страницы
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `/login` — бренд + форма
+- `/companies` — search, pagination, Enable/Disable
+- Create company modal + ошибка имени (`name_taken`)
+- `/companies/[id]` — traffic toggle, имена офферов, View details, drift alert без Fetch, geo patch
+- `/offers` — read-only каталог
+- `/companies/[id]/streams` — shares, pin/unpin, Remove, Bring back, Add, Push, Cancel, Fetch
+- localStorage queue; Fetch disabled при `update_mode` или непустой очереди
+- Доли берутся из ответа API (без клиентского WeightUtil как истины)
+- Клиентский запрет pin/`set_percent` последнего свободного до запроса
 
 ### Комментарии
 
-—
+- Push/Fetch/Cancel только в редакторе; traffic на карточке (+ Enable/Disable в списке по фазе 11)
+- Нет `GET /geo` в API — гео как comma-separated поле
+- UI English; состав экранов по Figma, не пиксель-пёрфект
+- Колонки Stats/Trends из макета редактора не подключены (нет данных в actions API)
 
 ---
 
 ## Фаза 12. Тестирование
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Backend pytest + `MockKeitaroClient` (dependency override): create idempotency / conflict 409 / Keitaro rollback / stuck `creating`; actions (version_conflict, last free `set_percent`, restore clears pin, duplicate add 422); push idempotent + removed archive; push fail keeps `update_mode` + old snapshot; cancel without Keitaro mutate; fetch synced without share normalize / `fetch_blocked` / `unknown_geo`; enable/disable Keitaro-first; parallel version race
+- `tests/test_weight_util.py` сохранён (11) + 18 integration → **29 passed**
+- Frontend Playwright `fe/e2e/login.spec.ts`: page loads; login success (mocked API) → `/companies`; login 401 shows error — **3 passed**
 
 ### Комментарии
 
-—
+- Продуктовый код не менялся (тесты / pytest-asyncio / Playwright)
+- Полный e2e create→editor (pin/Push/Cancel/Fetch/queue) — пробел; только login smoke
+- Дефектов продукта по покрытым сценариям не найдено; reconcile `creating` по-прежнему нет (фаза 7)
