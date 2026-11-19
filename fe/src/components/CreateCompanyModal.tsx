@@ -26,7 +26,7 @@ const NAME_RE = /^[a-zA-Z0-9_\- ]{1,64}$/;
 
 export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
   const [name, setName] = useState("");
-  const [geos, setGeos] = useState("MX,AU,RO");
+  const [geos, setGeos] = useState("MX, AU, RO");
   const [offer, setOffer] = useState<OfferCatalogItem | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
 
   function reset() {
     setName("");
-    setGeos("MX,AU,RO");
+    setGeos("MX, AU, RO");
     setOffer(null);
     setLocalError(null);
     setNameError(null);
@@ -94,34 +94,39 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content bg="bg">
-            <Dialog.Header>
-              <Dialog.Title color="blue.fg">New company</Dialog.Title>
+          <Dialog.Content bg="bg" rounded="xl" maxW="480px" p="6" gap="4">
+            <Dialog.Header p="0" mb="0">
+              <Dialog.Title
+                fontSize="xl"
+                fontWeight="semibold"
+                color="gray.fg"
+              >
+                New company
+              </Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body>
-              <Text color="fg.muted" mb="4" fontSize="sm">
+            <Dialog.Body p="0">
+              <Text color="fg.muted" mb="4" fontSize="sm" fontWeight="semibold">
                 One offer, 100%. Domain, group and source are set by the server.
               </Text>
               <Stack gap="4">
                 <Field.Root invalid={!!nameError}>
-                  <Field.Label>Company name</Field.Label>
+                  <Field.Label fontWeight="semibold">Name</Field.Label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="mx_beauty"
+                    placeholder="Company name"
                   />
                   {nameError ? <Field.ErrorText>{nameError}</Field.ErrorText> : null}
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label>Geo codes</Field.Label>
+                  <Field.Label fontWeight="semibold">Geo</Field.Label>
                   <Input
                     value={geos}
                     onChange={(e) => setGeos(e.target.value)}
-                    placeholder="MX,AU,RO"
+                    placeholder="MX, AU, RO"
                   />
-                  <Field.HelperText>Comma-separated ISO codes</Field.HelperText>
                 </Field.Root>
-                <OfferCombobox value={offer} onChange={setOffer} />
+                <OfferCombobox value={offer} onChange={setOffer} label="Offer" />
                 {localError ? (
                   <Text color="fg.error" fontSize="sm">
                     {localError}
@@ -129,7 +134,7 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
                 ) : null}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer>
+            <Dialog.Footer p="0" mt="2" gap="2" justifyContent="flex-end">
               <Dialog.ActionTrigger asChild>
                 <Button size="sm" variant="outline" colorPalette="cyan">
                   Cancel

@@ -40,26 +40,24 @@ export default function LoginPage() {
   }
 
   return (
-    <Flex minH="100vh" direction={{ base: "column", lg: "row" }}>
+    <Flex minH="100vh" direction={{ base: "column", md: "row" }}>
       <Flex
-        display={{ base: "flex", lg: "flex" }}
-        flex={{ base: "none", lg: "0 0 36%" }}
-        bg="gray.900"
-        color="white"
-        p={{ base: "8", lg: "12" }}
+        display={{ base: "none", md: "flex" }}
+        w={{ md: "280px", lg: "520px" }}
+        flexShrink={0}
+        bg="blue.subtle"
+        color="blue.fg"
+        pt="12"
+        px="10"
         direction="column"
-        justify="center"
-        minH={{ base: "40", lg: "100vh" }}
+        gap="3"
+        as="aside"
+        aria-label="Brand"
       >
-        <Heading
-          as="h1"
-          size={{ base: "2xl", lg: "3xl" }}
-          fontFamily="heading"
-          color="blue.300"
-        >
+        <Heading as="h1" fontSize="3xl" fontWeight="semibold" color="blue.fg">
           etolegko
         </Heading>
-        <Text mt="3" color="gray.300" maxW="sm">
+        <Text fontSize="md" color="blue.fg">
           Campaigns, streams, and offer weights
         </Text>
       </Flex>
@@ -69,7 +67,7 @@ export default function LoginPage() {
         align="center"
         justify="center"
         bg="bg.subtle"
-        p="6"
+        p={{ base: "4", md: "6" }}
         as="main"
       >
         <Box
@@ -78,33 +76,49 @@ export default function LoginPage() {
           bg="bg"
           borderWidth="1px"
           borderColor="border.subtle"
-          rounded="md"
-          p="8"
+          rounded="xl"
+          px="6"
+          py="7"
           w="full"
-          maxW="md"
+          maxW="380px"
         >
-          <Heading as="h2" size="lg" color="blue.fg" mb="1">
-            Sign in
+          <Heading
+            as="h2"
+            fontSize="xl"
+            fontWeight="semibold"
+            color="gray.fg"
+            mb="1"
+          >
+            <Box as="span" display={{ base: "inline", md: "none" }}>
+              etolegko
+            </Box>
+            <Box as="span" display={{ base: "none", md: "inline" }}>
+              Sign in
+            </Box>
           </Heading>
-          <Text color="fg.muted" fontSize="sm" mb="6">
+          <Text color="fg.muted" fontSize="sm" mb="4">
             Username and password
           </Text>
-          <Stack gap="4">
+          <Stack gap="3.5">
             <Field.Root>
-              <Field.Label>Username</Field.Label>
+              <Field.Label srOnly>Username</Field.Label>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                placeholder="admin"
+                aria-label="Username"
               />
             </Field.Root>
             <Field.Root>
-              <Field.Label>Password</Field.Label>
+              <Field.Label srOnly>Password</Field.Label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                placeholder="••••••••"
+                aria-label="Password"
               />
             </Field.Root>
             {error ? (
@@ -117,6 +131,7 @@ export default function LoginPage() {
               size="sm"
               variant="solid"
               colorPalette="blue"
+              w="full"
               loading={isLoading}
             >
               Sign in

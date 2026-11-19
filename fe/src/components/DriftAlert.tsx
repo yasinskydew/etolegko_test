@@ -39,14 +39,12 @@ export function DriftAlert({ drift, reconcileUnavailable }: Props) {
   if (parts.length === 0) return null;
 
   return (
-    <Alert.Root status="warning">
-      <Alert.Indicator />
+    <Alert.Root status="warning" rounded="md">
       <Alert.Content>
-        <Alert.Title>Tracker data differs</Alert.Title>
-        <Alert.Description>
-          Diverged: {parts.join(", ")}. Open streams editor to Fetch when the
-          flow is synced and the local queue is empty.
-        </Alert.Description>
+        <Alert.Title fontWeight="medium">
+          Tracker data differs
+          {parts.length ? ` (${parts.join(", ")})` : ""}
+        </Alert.Title>
       </Alert.Content>
     </Alert.Root>
   );
