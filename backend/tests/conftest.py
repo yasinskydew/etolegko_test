@@ -1,4 +1,8 @@
-"""Fixtures for API integration tests with mocked KeitaroClient."""
+"""Fixtures for API integration tests with mocked KeitaroClient.
+
+IMPORTANT: automated tests must never call a real Keitaro server — only
+MockKeitaroClient / httpx.MockTransport. KEITARO_URL from .env is cleared.
+"""
 
 from __future__ import annotations
 
@@ -31,8 +35,21 @@ os.environ.setdefault(
 os.environ["JWT_SECRET"] = "changeme-test-secret-key-32bytes!!"
 os.environ.setdefault("ADMIN_USERNAME", "admin")
 os.environ.setdefault("ADMIN_PASSWORD", "changeme")
-os.environ.setdefault("KEITARO_URL", "")
 os.environ.setdefault("GOOGLE_URL", "https://google.com")
+
+# Force-clear tracker URL after .env load (setdefault would keep a real URL).
+os.environ["KEITARO_URL"] = ""
+os.environ["KEITARO_API_KEY"] = "test-mock-unused"
+
+
+def _assert_no_real_keitaro() -> None:
+    """Refuse any non-empty KEITARO_URL during pytest (real Admin API)."""
+    url = (os.environ.get("KEITARO_URL") or "").strip()
+    if url:
+        raise RuntimeError(
+            "Refusing real Keitaro in automated tests "
+            f"(KEITARO_URL={url!r}). Use MockKeitaroClient / httpx.MockTransport only."
+        )
 
 
 def _isolate_test_database_url() -> str:
@@ -64,6 +81,9 @@ def _assert_not_app_database(url: str) -> None:
         )
 
 
+_assert_no_real_keitaro()
+
+from app.clients import keitaro as keitaro_mod  # noqa: E402
 from app.clients.keitaro import (  # noqa: E402
     CreatedCampaign,
     KeitaroCampaign,
@@ -72,6 +92,9 @@ from app.clients.keitaro import (  # noqa: E402
 from app.db import session as db_session  # noqa: E402
 from app.deps import get_keitaro  # noqa: E402
 from app.main import app  # noqa: E402
+
+# Drop any singleton built before KEITARO_URL was cleared.
+keitaro_mod._keitaro_singleton = None
 
 
 def _rebind_db_engine() -> None:
@@ -179,10 +202,13 @@ class MockKeitaroClient(NoopKeitaroClient):
 
 @pytest.fixture
 def mock_keitaro() -> Iterator[MockKeitaroClient]:
+    _assert_no_real_keitaro()
+    keitaro_mod._keitaro_singleton = None
     client = MockKeitaroClient()
     app.dependency_overrides[get_keitaro] = lambda: client
     yield client
     app.dependency_overrides.pop(get_keitaro, None)
+    keitaro_mod._keitaro_singleton = None
 
 
 @pytest.fixture(scope="session", autouse=True)

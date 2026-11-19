@@ -13,5 +13,5 @@ model: inherit
 - Создание: кампания + поток 1 (фильтр стран → `GOOGLE_URL`) + поток 2 (офферы). Откат при ошибке.
 - Sync: чтение потоков, diff, один запрос на поток. В Keitaro уходят только участники и `percent`.
 - Документацию API читай через Fetch MCP или Context7; не угадывай эндпоинты.
-- Для тестов: `respx` или `httpx.MockTransport`.
+- Для тестов: только моки (`MockKeitaroClient`, `httpx.MockTransport` / `respx`). **Никогда** не вызывать реальный Keitaro из pytest/CI.
 - Отвечай кратко, по-русски.

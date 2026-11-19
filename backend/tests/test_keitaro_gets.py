@@ -1,4 +1,7 @@
-"""Unit tests for HttpKeitaroClient GET parsing and error mapping (no network)."""
+"""Unit tests for HttpKeitaroClient GET parsing and error mapping.
+
+Uses httpx.MockTransport only — never a real Keitaro server.
+"""
 
 from __future__ import annotations
 
