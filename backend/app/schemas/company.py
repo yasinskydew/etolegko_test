@@ -154,9 +154,13 @@ class StatsOut(BaseModel):
 class OfferCatalogItem(BaseModel):
     offer_id: int
     name: str | None = None
+    country: list[str] = Field(
+        default_factory=list,
+        description="Keitaro Offer.country codes (Admin API string[]).",
+    )
 
 
 class OfferCatalogResponse(BaseModel):
     items: list[OfferCatalogItem] = Field(
-        description="Catalog entries from Keitaro (or noop mock)."
+        description="Catalog entries from Keitaro Admin API GET /offers."
     )

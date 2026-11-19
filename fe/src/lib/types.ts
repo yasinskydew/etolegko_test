@@ -66,6 +66,7 @@ export type Stats = {
 export type OfferCatalogItem = {
   offer_id: number;
   name: string | null;
+  country?: string[];
 };
 
 export type OfferCatalogResponse = {

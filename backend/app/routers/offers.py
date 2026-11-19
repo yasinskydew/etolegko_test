@@ -13,7 +13,9 @@ router = APIRouter(tags=["offers"])
     response_model=OfferCatalogResponse,
     summary="List offers catalog",
     description=(
-        "Read-only Keitaro offer catalog (or noop mock when `KEITARO_URL` is empty). "
+        "Read-only catalog via Keitaro Admin API `GET /offers` "
+        "(through `HttpKeitaroClient`). "
+        "When `KEITARO_URL` is empty the list is empty (no local stub catalog). "
         "Optional substring filter `q` on offer name. "
         "No create/update/delete via this API."
     ),

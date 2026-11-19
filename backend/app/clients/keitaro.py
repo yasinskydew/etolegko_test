@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
+import json
 import logging
 import os
-import itertools
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -18,6 +20,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 MAX_RETRIES = 3
 RETRY_BACKOFF = 0.4
+CAMPAIGN_PAGE_SIZE = 100
+KEITARO_NOT_FOUND = "keitaro_not_found"
 
 
 @dataclass
@@ -25,6 +29,7 @@ class KeitaroOffer:
     offer_id: int
     name: str | None
     share: int = 0
+    country: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -135,10 +140,9 @@ class NoopKeitaroClient(KeitaroClient):
         self.source_id = 1
         self.noop = True
         self._campaigns: dict[int, KeitaroCampaign] = {}
-        self._offers: dict[int, KeitaroOffer] = {
-            3749: KeitaroOffer(offer_id=3749, name="Miaflow BEAUTY"),
-            3801: KeitaroOffer(offer_id=3801, name="Demo Offer 2"),
-        }
+        # Catalog is empty in noop: GET /offers must not invent Keitaro rows.
+        # get_offer / create may still synthesize ids for offline company tests.
+        self._offers: dict[int, KeitaroOffer] = {}
         # Avoid collisions after process restart when DB already has prior mock ids.
         base = int(time.time()) % 1_000_000_000
         self._campaign_ids = itertools.count(base + 1)
@@ -148,11 +152,9 @@ class NoopKeitaroClient(KeitaroClient):
         logger.warning("KEITARO_URL empty — NoopKeitaroClient (mock mode)")
 
     async def list_offers(self, q: str | None = None) -> list[KeitaroOffer]:
-        items = list(self._offers.values())
-        if q:
-            ql = q.lower()
-            items = [o for o in items if o.name and ql in o.name.lower()]
-        return items
+        # No local catalog stub — real list comes from HttpKeitaroClient GET /offers.
+        _ = q
+        return []
 
     async def get_offer(self, offer_id: int) -> KeitaroOffer | None:
         return self._offers.get(offer_id) or KeitaroOffer(
@@ -322,9 +324,7 @@ class HttpKeitaroClient(KeitaroClient):
 
     @staticmethod
     def _find_id(items: Any, name: str) -> int | None:
-        if not isinstance(items, list):
-            return None
-        for item in items:
+        for item in _as_list(items):
             if isinstance(item, dict) and str(item.get("name", "")).lower() == name.lower():
                 return int(item["id"])
         return None
@@ -338,6 +338,7 @@ class HttpKeitaroClient(KeitaroClient):
         params: dict | None = None,
         retry: bool = False,
     ) -> Any:
+        # Retries only when caller opts in (GET / idempotent reads).
         attempts = MAX_RETRIES if retry else 1
         last_exc: Exception | None = None
         for attempt in range(attempts):
@@ -364,24 +365,43 @@ class HttpKeitaroClient(KeitaroClient):
                 await asyncio.sleep(RETRY_BACKOFF * (attempt + 1))
                 continue
             if response.status_code >= 400:
-                raise AppError(
-                    502,
-                    "keitaro_bad_gateway",
-                    f"Keitaro responded with {response.status_code}.",
-                )
+                raise _map_keitaro_http_error(response)
             if response.status_code == 204 or not response.content:
                 return None
-            return response.json()
+            try:
+                return response.json()
+            except ValueError as exc:
+                raise AppError(
+                    502, "keitaro_bad_gateway", "Keitaro returned invalid JSON."
+                ) from exc
         raise AppError(502, "keitaro_bad_gateway", "Keitaro request failed.") from last_exc
 
+    async def _list_all_campaigns(self) -> list[dict[str, Any]]:
+        """GET /campaigns with limit/offset until a short page."""
+        collected: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            data = await self._request(
+                "GET",
+                "/campaigns",
+                params={"limit": CAMPAIGN_PAGE_SIZE, "offset": offset},
+                retry=True,
+            )
+            page = [row for row in _as_list(data) if isinstance(row, dict)]
+            collected.extend(page)
+            if len(page) < CAMPAIGN_PAGE_SIZE:
+                break
+            offset += CAMPAIGN_PAGE_SIZE
+        return collected
+
     async def list_offers(self, q: str | None = None) -> list[KeitaroOffer]:
+        """Admin API GET /offers — full catalog (id, name, country)."""
         data = await self._request("GET", "/offers", retry=True)
         items: list[KeitaroOffer] = []
-        for row in data or []:
-            offer = KeitaroOffer(
-                offer_id=int(row["id"]),
-                name=row.get("name"),
-            )
+        for row in _as_list(data):
+            offer = _parse_offer_row(row)
+            if offer is None:
+                continue
             self._offer_cache[offer.offer_id] = offer
             items.append(offer)
         if q:
@@ -394,17 +414,18 @@ class HttpKeitaroClient(KeitaroClient):
             return self._offer_cache[offer_id]
         try:
             data = await self._request("GET", f"/offers/{offer_id}", retry=True)
-        except AppError:
+        except AppError as exc:
+            if exc.error == KEITARO_NOT_FOUND:
+                return None
+            raise
+        offer = _parse_offer_row(data)
+        if offer is None:
             return None
-        if not data:
-            return None
-        offer = KeitaroOffer(offer_id=int(data["id"]), name=data.get("name"))
         self._offer_cache[offer_id] = offer
         return offer
 
     async def find_campaign_by_name(self, name: str) -> KeitaroCampaign | None:
-        data = await self._request("GET", "/campaigns", retry=True)
-        for row in data or []:
+        for row in await self._list_all_campaigns():
             if str(row.get("name", "")).lower() == name.lower():
                 return await self.get_campaign(int(row["id"]))
         return None
@@ -413,22 +434,19 @@ class HttpKeitaroClient(KeitaroClient):
         try:
             data = await self._request("GET", f"/campaigns/{campaign_id}", retry=True)
         except AppError as exc:
-            if "404" in exc.message or "not found" in exc.message.lower():
+            if exc.error == KEITARO_NOT_FOUND:
                 return None
-            # Keitaro may return 502 for missing; try streams endpoint
-            try:
-                await self._request(
-                    "GET", f"/campaigns/{campaign_id}/streams", retry=True
-                )
-            except AppError:
-                return None
-            return None
-        if not data:
+            raise
+        if not data or not isinstance(data, dict):
             return None
         streams_raw = await self._request(
             "GET", f"/campaigns/{campaign_id}/streams", retry=True
         )
-        streams = [self._parse_stream(s) for s in streams_raw or []]
+        streams = [
+            self._parse_stream(s)
+            for s in _as_list(streams_raw)
+            if isinstance(s, dict)
+        ]
         state = "active"
         if data.get("state") == "disabled" or data.get("status") == "disabled":
             state = "disabled"
@@ -440,33 +458,47 @@ class HttpKeitaroClient(KeitaroClient):
         )
 
     def _parse_stream(self, raw: dict) -> KeitaroStream:
+        """Parse Stream; schema stays API enum (landings|redirect|action)."""
         filters_geo: list[str] = []
         for filt in raw.get("filters") or []:
-            if filt.get("name") == "country" or filt.get("name") == "geo":
-                payload = filt.get("payload") or []
-                if isinstance(payload, str):
-                    filters_geo = [p.strip() for p in payload.split(",") if p.strip()]
-                elif isinstance(payload, list):
-                    filters_geo = [str(p) for p in payload]
+            if not isinstance(filt, dict):
+                continue
+            if filt.get("name") in ("country", "geo"):
+                filters_geo = _parse_filter_payload(filt.get("payload"))
         offers: list[KeitaroOffer] = []
         for offer in raw.get("offers") or []:
-            share = int(offer.get("share") or offer.get("percent") or 0)
+            if not isinstance(offer, dict):
+                continue
+            # OfferStream: offer_id + share (legacy: id / percent).
+            if "offer_id" in offer:
+                oid = int(offer["offer_id"])
+            elif "id" in offer:
+                oid = int(offer["id"])
+            else:
+                continue
+            share_raw = offer.get("share")
+            if share_raw is None:
+                share_raw = offer.get("percent")
             offers.append(
                 KeitaroOffer(
-                    offer_id=int(offer["offer_id"] if "offer_id" in offer else offer["id"]),
+                    offer_id=oid,
                     name=offer.get("name"),
-                    share=share,
+                    share=int(share_raw or 0),
                 )
             )
+        action_payload = raw.get("action_payload")
+        if action_payload is not None and not isinstance(action_payload, str):
+            action_payload = json.dumps(action_payload)
         return KeitaroStream(
             stream_id=int(raw["id"]),
             name=raw.get("name"),
             position=int(raw.get("position") or raw.get("order") or 0),
+            # Keep API value; offers-flow is detected by offers[] / name elsewhere.
             schema=raw.get("schema"),
             filters_geo=filters_geo,
             offers=offers,
             action_type=raw.get("action_type"),
-            action_payload=raw.get("action_payload"),
+            action_payload=action_payload,
         )
 
     async def create_company_campaign(
@@ -623,10 +655,127 @@ def _as_int(value: Any) -> int | None:
         return None
 
 
+def _as_list(value: Any) -> list[Any]:
+    """Normalize Keitaro list responses (bare array or wrapped object)."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        for key in ("rows", "data", "items", "offers", "campaigns", "streams"):
+            nested = value.get(key)
+            if isinstance(nested, list):
+                return nested
+        if "id" in value:
+            return [value]
+    return []
+
+
+def _parse_country(value: Any) -> list[str]:
+    """Offer.country is string[] in Admin API; tolerate CSV / single string."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        return [part.strip() for part in text.split(",") if part.strip()]
+    return [str(value).strip()] if str(value).strip() else []
+
+
+def _parse_offer_row(row: Any) -> KeitaroOffer | None:
+    """Map Admin API Offer object → KeitaroOffer."""
+    if not isinstance(row, dict) or "id" not in row:
+        return None
+    name = row.get("name")
+    return KeitaroOffer(
+        offer_id=int(row["id"]),
+        name=str(name) if name is not None else None,
+        country=_parse_country(row.get("country")),
+    )
+
+
+def _parse_filter_payload(payload: Any) -> list[str]:
+    """Filter.payload is a string in OpenAPI (CSV or JSON-array string)."""
+    if payload is None:
+        return []
+    if isinstance(payload, list):
+        return [str(p).strip() for p in payload if str(p).strip()]
+    if isinstance(payload, str):
+        text = payload.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(p).strip() for p in parsed if str(p).strip()]
+        return [part.strip() for part in text.split(",") if part.strip()]
+    return [str(payload).strip()] if str(payload).strip() else []
+
+
+def _keitaro_error_message(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    if isinstance(body, dict):
+        err = body.get("error")
+        if err:
+            return str(err)
+        message = body.get("message")
+        if message:
+            return str(message)
+    text = (response.text or "").strip()
+    if text:
+        return text[:300]
+    return f"Keitaro responded with {response.status_code}."
+
+
+def _map_keitaro_http_error(response: httpx.Response) -> AppError:
+    message = _keitaro_error_message(response)
+    if response.status_code == 404:
+        # Distinguishable so GET helpers can return None; still 502 to API.
+        return AppError(502, KEITARO_NOT_FOUND, message)
+    return AppError(502, "keitaro_bad_gateway", message)
+
+
 _keitaro_singleton: KeitaroClient | None = None
 
 
+def _load_repo_dotenv() -> None:
+    """Best-effort load of repo-root `.env` without overriding existing env."""
+    try:
+        root = Path(__file__).resolve().parents[3]
+    except IndexError:
+        return
+    env_path = root / ".env"
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip('"').strip("'")
+
+
 def build_keitaro_client() -> KeitaroClient:
+    _load_repo_dotenv()
     url = (os.environ.get("KEITARO_URL") or "").strip()
     if not url:
         return NoopKeitaroClient()

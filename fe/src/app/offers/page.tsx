@@ -81,7 +81,11 @@ export default function OffersPage() {
                 <Table.Cell>{o.offer_id}</Table.Cell>
                 <Table.Cell>{o.name ?? "—"}</Table.Cell>
                 <Table.Cell>
-                  <Text color="fg.muted">—</Text>
+                  {o.country && o.country.length > 0 ? (
+                    o.country.join(", ")
+                  ) : (
+                    <Text color="fg.muted">—</Text>
+                  )}
                 </Table.Cell>
               </Table.Row>
             ))}
