@@ -15,7 +15,7 @@
 | 9. RTK Query | done | 2026-11-19 |
 | 10. Базовые компоненты | done | 2026-11-19 |
 | 11. Страницы | done | 2026-11-19 |
-| 12. Тестирование | pending | — |
+| 12. Тестирование | done | 2026-11-19 |
 
 ---
 
@@ -244,12 +244,17 @@
 
 ## Фаза 12. Тестирование
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Backend pytest + `MockKeitaroClient` (dependency override): create idempotency / conflict 409 / Keitaro rollback / stuck `creating`; actions (version_conflict, last free `set_percent`, restore clears pin, duplicate add 422); push idempotent + removed archive; push fail keeps `update_mode` + old snapshot; cancel without Keitaro mutate; fetch synced without share normalize / `fetch_blocked` / `unknown_geo`; enable/disable Keitaro-first; parallel version race
+- `tests/test_weight_util.py` сохранён (11) + 18 integration → **29 passed**
+- Frontend Playwright `fe/e2e/login.spec.ts`: page loads; login success (mocked API) → `/companies`; login 401 shows error — **3 passed**
 
 ### Комментарии
 
-—
+- Продуктовый код не менялся (тесты / pytest-asyncio / Playwright)
+- Полный e2e create→editor (pin/Push/Cancel/Fetch/queue) — пробел; только login smoke
+- Дефектов продукта по покрытым сценариям не найдено; reconcile `creating` по-прежнему нет (фаза 7)
