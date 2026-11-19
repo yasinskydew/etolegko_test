@@ -34,6 +34,36 @@ os.environ.setdefault("ADMIN_PASSWORD", "changeme")
 os.environ.setdefault("KEITARO_URL", "")
 os.environ.setdefault("GOOGLE_URL", "https://google.com")
 
+
+def _isolate_test_database_url() -> str:
+    """Point tests at etolegko_test so TRUNCATE never wipes the app DB."""
+    explicit = (os.environ.get("TEST_DATABASE_URL") or "").strip()
+    if explicit:
+        os.environ["DATABASE_URL"] = explicit
+        return explicit
+    from sqlalchemy.engine.url import make_url
+
+    url = make_url(os.environ["DATABASE_URL"])
+    if (url.database or "") != "etolegko_test":
+        url = url.set(database="etolegko_test")
+        os.environ["DATABASE_URL"] = url.render_as_string(hide_password=False)
+    return os.environ["DATABASE_URL"]
+
+
+_TEST_DB_URL = _isolate_test_database_url()
+
+
+def _assert_not_app_database(url: str) -> None:
+    from sqlalchemy.engine.url import make_url
+
+    db_name = make_url(url).database or ""
+    if db_name == "etolegko" and not os.environ.get("TEST_ALLOW_APP_DB"):
+        raise RuntimeError(
+            "Refusing to TRUNCATE app database 'etolegko'. "
+            "Tests must use etolegko_test (or set TEST_DATABASE_URL / TEST_ALLOW_APP_DB=1)."
+        )
+
+
 from app.clients.keitaro import (  # noqa: E402
     CreatedCampaign,
     KeitaroCampaign,
@@ -46,6 +76,7 @@ from app.main import app  # noqa: E402
 
 def _rebind_db_engine() -> None:
     """Bind app session factory to a NullPool engine on the current event loop."""
+    _assert_not_app_database(os.environ["DATABASE_URL"])
     engine = create_async_engine(os.environ["DATABASE_URL"], poolclass=NullPool)
     db_session.engine = engine
     db_session.async_session_factory = async_sessionmaker(
@@ -152,6 +183,23 @@ def mock_keitaro() -> Iterator[MockKeitaroClient]:
     app.dependency_overrides[get_keitaro] = lambda: client
     yield client
     app.dependency_overrides.pop(get_keitaro, None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _migrate_test_database() -> None:
+    """Ensure isolated test DB schema exists (alembic upgrade head)."""
+    import subprocess
+    import sys
+
+    _assert_not_app_database(_TEST_DB_URL)
+    env = os.environ.copy()
+    env["DATABASE_URL"] = _TEST_DB_URL
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=str(Path(__file__).resolve().parents[1]),
+        env=env,
+        check=True,
+    )
 
 
 @pytest_asyncio.fixture(autouse=True)

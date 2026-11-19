@@ -85,8 +85,20 @@ class CompanyListItem(BaseModel):
     id: int
     name: str
     lifecycle: CompanyLifecycle
-    traffic_status: TrafficStatus
-    sync: Literal["synced", "update_mode"] | None = None
+    traffic_status: TrafficStatus = Field(
+        description="DB `company.traffic_status` (enable/disable). Not read from Keitaro on list."
+    )
+    geo_codes: list[str] = Field(
+        default_factory=list,
+        description="Ordered codes from `company_geo`.",
+    )
+    sync: Literal["synced", "update_mode"] | None = Field(
+        default=None,
+        description=(
+            "Local offers working copy vs snapshot; `null` while creating. "
+            "Tracker drift is not computed on list — only on company card GET."
+        ),
+    )
     version: int
 
 

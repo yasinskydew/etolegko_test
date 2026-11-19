@@ -59,6 +59,7 @@ class CompanyRepository:
             .offset((page - 1) * page_size)
             .limit(page_size)
             .options(
+                selectinload(Company.geos),
                 selectinload(Company.streams).selectinload(Stream.offers),
                 selectinload(Company.streams).selectinload(Stream.snapshots),
             )

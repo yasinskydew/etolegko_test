@@ -20,6 +20,7 @@ import { DriftAlert } from "@/components/DriftAlert";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TrafficToggle } from "@/components/TrafficToggle";
 import { useAuthGate } from "@/hooks/useAuthGate";
+import { syncDisplayForCard } from "@/lib/syncDisplay";
 import {
   getErrorMessage,
   useDisableCompanyMutation,
@@ -114,8 +115,22 @@ export default function CompanyCardPage() {
     }
   }
 
+  const syncUi = company
+    ? syncDisplayForCard(company.sync, company.drift)
+    : null;
+
   return (
-    <AppShell title={company ? `Companies / ${company.name}` : "Company"}>
+    <AppShell
+      title={company ? company.name : "Company"}
+      breadcrumbs={
+        company
+          ? [
+              { label: "Companies", href: "/companies" },
+              { label: company.name },
+            ]
+          : [{ label: "Companies", href: "/companies" }, { label: "Company" }]
+      }
+    >
       <Stack gap="4">
         {companyQuery.isError ? (
           <Text color="fg.error">{getErrorMessage(companyQuery.error)}</Text>
@@ -145,13 +160,8 @@ export default function CompanyCardPage() {
                   label={company.traffic_status}
                   tone={company.traffic_status === "active" ? "green" : "red"}
                 />
-                {company.sync ? (
-                  <StatusBadge
-                    label={
-                      company.sync === "update_mode" ? "update mode" : "synced"
-                    }
-                    tone={company.sync === "update_mode" ? "orange" : "green"}
-                  />
+                {syncUi ? (
+                  <StatusBadge label={syncUi.label} tone={syncUi.tone} />
                 ) : null}
                 {company.geo_codes.map((g, i) => (
                   <StatusBadge

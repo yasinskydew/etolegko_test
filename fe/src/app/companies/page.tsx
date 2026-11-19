@@ -20,6 +20,7 @@ import { CreateCompanyModal } from "@/components/CreateCompanyModal";
 import { PagePagination } from "@/components/PagePagination";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
+import { syncDisplayForList } from "@/lib/syncDisplay";
 import { getErrorMessage, useListCompaniesQuery } from "@/store/api";
 
 const PAGE_SIZE = 20;
@@ -107,27 +108,32 @@ export default function CompaniesPage() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {items.map((c) => (
-                <Table.Row key={c.id}>
-                  <Table.Cell>
-                    <Link href={`/companies/${c.id}`}>{c.name}</Link>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Text color="fg.muted">—</Text>
-                  </Table.Cell>
-                  <Table.Cell>
-                    {c.lifecycle === "creating" ? "—" : c.traffic_status}
-                  </Table.Cell>
-                  <Table.Cell>{c.lifecycle}</Table.Cell>
-                  <Table.Cell>
-                    {c.sync
-                      ? c.sync === "update_mode"
-                        ? "update mode"
-                        : "synced"
-                      : "—"}
-                  </Table.Cell>
-                </Table.Row>
-              ))}
+              {items.map((c) => {
+                const syncUi = syncDisplayForList(c.sync);
+                const geos = c.geo_codes ?? [];
+                const geo = geos.length > 0 ? geos.join(", ") : null;
+                return (
+                  <Table.Row key={c.id}>
+                    <Table.Cell>
+                      <Link href={`/companies/${c.id}`}>{c.name}</Link>
+                    </Table.Cell>
+                    <Table.Cell>
+                      {geo ? (
+                        geo
+                      ) : (
+                        <Text color="fg.muted">—</Text>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {c.lifecycle === "creating" ? "—" : c.traffic_status}
+                    </Table.Cell>
+                    <Table.Cell>{c.lifecycle}</Table.Cell>
+                    <Table.Cell>
+                      {syncUi ? syncUi.label : "—"}
+                    </Table.Cell>
+                  </Table.Row>
+                );
+              })}
               {!isFetching && items.length === 0 ? (
                 <Table.Row>
                   <Table.Cell colSpan={5}>
@@ -144,50 +150,53 @@ export default function CompaniesPage() {
           columns={1}
           gap="4"
         >
-          {items.map((c) => (
-            <Box
-              key={c.id}
-              bg="bg"
-              borderWidth="1px"
-              borderColor="border.subtle"
-              rounded="md"
-              p="4"
-              as="article"
-            >
-              <Link href={`/companies/${c.id}`}>
-                <Stack gap="2">
-                  <Text fontWeight="medium" color="gray.fg">
-                    {c.name}
-                  </Text>
-                  <StatusBadge
-                    label={
-                      c.lifecycle === "creating"
-                        ? "creating"
-                        : c.traffic_status
-                    }
-                    tone={
-                      c.lifecycle === "creating"
-                        ? "purple"
-                        : c.traffic_status === "active"
-                          ? "green"
-                          : "red"
-                    }
-                  />
-                  {c.sync ? (
+          {items.map((c) => {
+            const syncUi = syncDisplayForList(c.sync);
+            const geos = c.geo_codes ?? [];
+            const geo = geos.length > 0 ? geos.join(", ") : "—";
+            return (
+              <Box
+                key={c.id}
+                bg="bg"
+                borderWidth="1px"
+                borderColor="border.subtle"
+                rounded="md"
+                p="4"
+                as="article"
+              >
+                <Link href={`/companies/${c.id}`}>
+                  <Stack gap="2">
+                    <Text fontWeight="medium" color="gray.fg">
+                      {c.name}
+                    </Text>
                     <StatusBadge
                       label={
-                        c.sync === "update_mode" ? "update mode" : "synced"
+                        c.lifecycle === "creating"
+                          ? "creating"
+                          : c.traffic_status
                       }
-                      tone={c.sync === "update_mode" ? "orange" : "green"}
+                      tone={
+                        c.lifecycle === "creating"
+                          ? "purple"
+                          : c.traffic_status === "active"
+                            ? "green"
+                            : "red"
+                      }
                     />
-                  ) : null}
-                  <Text fontSize="xs" color="fg.muted">
-                    —
-                  </Text>
-                </Stack>
-              </Link>
-            </Box>
-          ))}
+                    {syncUi ? (
+                      <StatusBadge
+                        label={syncUi.label}
+                        tone={syncUi.tone}
+                      />
+                    ) : null}
+                    <Text fontSize="xs" color="fg.muted">
+                      {geo}
+                    </Text>
+                  </Stack>
+                </Link>
+              </Box>
+            );
+          })}
           {!isFetching && items.length === 0 ? (
             <Text color="fg.muted">No companies yet.</Text>
           ) : null}
