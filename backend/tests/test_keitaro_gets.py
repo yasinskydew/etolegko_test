@@ -13,6 +13,7 @@ from app.clients.keitaro import (
     HttpKeitaroClient,
     _as_list,
     _map_keitaro_http_error,
+    _normalize_admin_api_base,
     _parse_filter_payload,
 )
 from app.errors import AppError
@@ -301,5 +302,77 @@ async def test_parse_stream_csv_payload_and_legacy_percent() -> None:
             }
         )
         assert json.loads(stream2.action_payload or "") == {"url": "https://x"}
+    finally:
+        await client.aclose()
+
+
+def test_normalize_admin_api_base() -> None:
+    assert (
+        _normalize_admin_api_base("https://tlgk.host:8105")
+        == "https://tlgk.host:8105/admin_api/v1"
+    )
+    assert (
+        _normalize_admin_api_base("https://tlgk.host:8105/v1")
+        == "https://tlgk.host:8105/admin_api/v1"
+    )
+    assert (
+        _normalize_admin_api_base("https://tlgk.host:8105/admin_api/v1/")
+        == "https://tlgk.host:8105/admin_api/v1"
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_google_geo_puts_streams_id() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["path"] = request.url.path
+        seen["body"] = json.loads(request.content.decode())
+        return httpx.Response(200, json={"id": 1328656})
+
+    client = _client_with_handler(handler)
+    try:
+        await client.update_google_geo(
+            campaign_id=215957,
+            stream_id=1328656,
+            geo_codes=["MX", "US"],
+        )
+        assert seen["method"] == "PUT"
+        assert seen["path"].endswith("/streams/1328656")
+        assert "/campaigns/" not in str(seen["path"])
+        body = seen["body"]
+        assert isinstance(body, dict)
+        assert body["campaign_id"] == 215957
+        assert body["filters"] == [
+            {"name": "country", "mode": "accept", "payload": ["MX", "US"]}
+        ]
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_update_stream_offers_puts_streams_id() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        seen["body"] = json.loads(request.content.decode())
+        return httpx.Response(200, json={"id": 1})
+
+    client = _client_with_handler(handler)
+    try:
+        await client.update_stream_offers(
+            campaign_id=10,
+            stream_id=99,
+            offers=[(3749, 100)],
+        )
+        assert seen["path"].endswith("/streams/99")
+        body = seen["body"]
+        assert isinstance(body, dict)
+        assert body["campaign_id"] == 10
+        assert body["offers"] == [
+            {"offer_id": 3749, "share": 100, "state": "active"}
+        ]
     finally:
         await client.aclose()
