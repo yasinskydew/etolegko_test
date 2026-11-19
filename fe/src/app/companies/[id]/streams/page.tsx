@@ -511,7 +511,7 @@ export default function StreamsEditorPage() {
                   }
                   onClick={() => void flushQueueThenPush()}
                 >
-                  Push
+                  Push to KT
                 </Button>
                 <Button
                   size="sm"
