@@ -5,7 +5,7 @@ export type SyncDisplay = {
   tone: "green" | "orange" | "red" | "purple";
 };
 
-function driftActive(drift: Drift | null | undefined): boolean {
+export function driftActive(drift: Drift | null | undefined): boolean {
   if (!drift) return false;
   return (
     drift.campaign_missing ||
@@ -26,17 +26,6 @@ export function syncDisplayForCard(
   }
   if (driftActive(drift)) {
     return { label: "drift", tone: "orange" };
-  }
-  if (sync === "synced") {
-    return { label: "synced", tone: "green" };
-  }
-  return null;
-}
-
-/** Sync column on companies list: local only (no mass Keitaro reconcile). */
-export function syncDisplayForList(sync: SyncStatus): SyncDisplay | null {
-  if (sync === "update_mode") {
-    return { label: "update mode", tone: "orange" };
   }
   if (sync === "synced") {
     return { label: "synced", tone: "green" };

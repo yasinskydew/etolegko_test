@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
-import { syncDisplayForCard } from "@/lib/syncDisplay";
+import { driftActive, syncDisplayForCard } from "@/lib/syncDisplay";
 import { OfferCombobox } from "@/components/OfferCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuthGate } from "@/hooks/useAuthGate";
@@ -333,11 +333,8 @@ export default function StreamsEditorPage() {
 
   if (!ready || !authed) return null;
 
-  const totalActive = offers
-    .filter((o) => !o.removed)
-    .reduce((s, o) => s + o.percent, 0);
-
   const syncUi = syncDisplayForCard(sync, company?.drift);
+  const offersInDrift = driftActive(company?.drift);
 
   return (
     <AppShell
@@ -423,7 +420,7 @@ export default function StreamsEditorPage() {
             ))}
 
             <Box
-              bg="bg"
+              bg={offersInDrift ? "orange.subtle" : "bg"}
               borderWidth="1px"
               borderColor="border.subtle"
               rounded="md"
@@ -438,13 +435,17 @@ export default function StreamsEditorPage() {
                 ) : null}
               </HStack>
               <Text color="fg.muted" fontSize="sm" mb="3">
-                Unpublished. Push sends active offers. Removed offers stay in
-                the archive. Fetch waits for Push or Cancel.
+                Not pushed yet. Push sends active offers. Removed offers stay
+                in the archive. Fetch waits for Push or Cancel.
                 {dirty ? " Local queue has pending actions." : ""}
               </Text>
 
               <Box overflowX="auto">
-                <Table.Root size="sm" variant="outline">
+                <Table.Root
+                  size="sm"
+                  variant="outline"
+                  bg={offersInDrift ? "orange.subtle" : "bg"}
+                >
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeader color="fg.muted" fontSize="xs">
@@ -472,10 +473,11 @@ export default function StreamsEditorPage() {
                 </Table.Root>
               </Box>
 
-              <Text mt="3" fontSize="sm" fontWeight="medium" color="gray.fg">
-                Total {totalActive}
-                {queueItems.length ? ` · queue ${queueItems.length}` : ""}
-              </Text>
+              {queueItems.length ? (
+                <Text mt="3" fontSize="sm" color="fg.muted">
+                  queue {queueItems.length}
+                </Text>
+              ) : null}
 
               <HStack mt="4" align="center" flexWrap="wrap" gap="2">
                 <Box flex="1" minW="200px">

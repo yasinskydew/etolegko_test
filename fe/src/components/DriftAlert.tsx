@@ -2,22 +2,13 @@
 
 import { Alert } from "@chakra-ui/react";
 
+import { driftActive } from "@/lib/syncDisplay";
 import type { Drift } from "@/lib/types";
 
 type Props = {
   drift: Drift | null;
   reconcileUnavailable?: boolean;
 };
-
-function driftParts(drift: Drift): string[] {
-  const parts: string[] = [];
-  if (drift.campaign_missing) parts.push("campaign missing");
-  if (drift.offers) parts.push("offers");
-  if (drift.geo) parts.push("geo");
-  if (drift.traffic) parts.push("traffic");
-  if (drift.streams) parts.push("streams");
-  return parts;
-}
 
 export function DriftAlert({ drift, reconcileUnavailable }: Props) {
   if (reconcileUnavailable) {
@@ -34,17 +25,12 @@ export function DriftAlert({ drift, reconcileUnavailable }: Props) {
     );
   }
 
-  if (!drift) return null;
-  const parts = driftParts(drift);
-  if (parts.length === 0) return null;
+  if (!driftActive(drift)) return null;
 
   return (
     <Alert.Root status="warning" rounded="md">
       <Alert.Content>
-        <Alert.Title fontWeight="medium">
-          Tracker data differs
-          {parts.length ? ` (${parts.join(", ")})` : ""}
-        </Alert.Title>
+        <Alert.Title fontWeight="medium">Tracker data differs</Alert.Title>
       </Alert.Content>
     </Alert.Root>
   );
