@@ -37,7 +37,7 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   return (
-    <Stack gap="1" as="nav" aria-label="Main">
+    <Stack gap="1" as="nav" aria-label="Main" w="full">
       {NAV.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -48,7 +48,12 @@ function NavLinks({
             size="sm"
             variant="ghost"
             justifyContent="flex-start"
-            bg={active ? "gray.100" : undefined}
+            rounded="md"
+            px="3"
+            py="2"
+            h="auto"
+            fontWeight={active ? "medium" : "normal"}
+            bg={active ? "gray.100" : "transparent"}
             color={active ? "gray.900" : "gray.fg"}
             onClick={onNavigate}
           >
@@ -70,17 +75,17 @@ function SidebarBody({
   onLogout: () => void;
 }) {
   return (
-    <Flex direction="column" h="full" p="4" gap="6">
-      <Box>
-        <Heading size="md" color="blue.fg" fontFamily="heading">
+    <Flex direction="column" h="full" px="3" py="5" gap="1">
+      <Box mb="3">
+        <Heading as="p" textStyle="md.semibold" color="blue.fg">
           etolegko
         </Heading>
-        <Text fontSize="xs" color="fg.muted">
+        <Text textStyle="xs" color="fg.muted">
           Admin
         </Text>
       </Box>
       <NavLinks pathname={pathname} onNavigate={onNavigate} />
-      <Box mt="auto">
+      <Box mt="auto" pt="4">
         <Button
           size="sm"
           variant="outline"
@@ -126,8 +131,9 @@ export function AppShell({ children, title }: Props) {
       <Flex direction="column" flex="1" minW={0}>
         <HStack
           as="header"
-          h="12"
-          px="4"
+          minH="11"
+          px={{ base: "4", md: "6" }}
+          py="3"
           borderBottomWidth="1px"
           borderColor="border.subtle"
           bg="bg"
@@ -174,11 +180,17 @@ export function AppShell({ children, title }: Props) {
               {title ?? "Admin"}
             </Text>
           </HStack>
-          <Text fontSize="sm" color="fg.muted">
+          <Text fontSize="sm" fontWeight="medium" color="gray.fg">
             admin
           </Text>
         </HStack>
-        <Box as="main" flex="1" p={{ base: "4", md: "6" }}>
+        <Box
+          as="main"
+          flex="1"
+          pt="6"
+          px={{ base: "4", md: "6" }}
+          pb="8"
+        >
           {children}
         </Box>
       </Flex>

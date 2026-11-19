@@ -1,17 +1,17 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
+import { textStyles, typographyTokens } from "./foundations/typography";
+
 const config = defineConfig({
   theme: {
     tokens: {
-      fonts: {
-        heading: { value: "var(--font-heading), Georgia, serif" },
-        body: { value: "var(--font-body), system-ui, sans-serif" },
-      },
+      ...typographyTokens,
     },
+    textStyles,
     semanticTokens: {
       colors: {
         // Rely on Chakra defaults: bg.subtle, bg, gray.fg, fg.muted, border.subtle,
-        // blue.fg / cyan.fg via colorPalette. Keep brand accent explicit for shell.
+        // blue.fg / cyan.fg via colorPalette.
         brand: {
           fg: { value: { _light: "{colors.blue.600}", _dark: "{colors.blue.300}" } },
         },
@@ -22,6 +22,8 @@ const config = defineConfig({
     body: {
       bg: "bg.subtle",
       color: "gray.fg",
+      fontFamily: "body",
+      textStyle: "sm",
     },
   },
 });

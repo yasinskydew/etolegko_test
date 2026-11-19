@@ -10,7 +10,6 @@ type Props = {
 };
 
 export function PagePagination({ page, pageSize, total, onPageChange }: Props) {
-  const count = Math.max(1, Math.ceil(total / pageSize));
   if (total <= pageSize) return null;
 
   return (
@@ -20,9 +19,9 @@ export function PagePagination({ page, pageSize, total, onPageChange }: Props) {
       page={page}
       onPageChange={(d) => onPageChange(d.page)}
     >
-      <ButtonGroup variant="outline" size="sm">
+      <ButtonGroup variant="outline" size="sm" gap="2">
         <Pagination.PrevTrigger asChild>
-          <IconButton aria-label="Previous page" colorPalette="cyan">
+          <IconButton aria-label="Previous page" variant="ghost">
             ‹
           </IconButton>
         </Pagination.PrevTrigger>
@@ -38,14 +37,11 @@ export function PagePagination({ page, pageSize, total, onPageChange }: Props) {
           )}
         />
         <Pagination.NextTrigger asChild>
-          <IconButton aria-label="Next page" colorPalette="cyan">
+          <IconButton aria-label="Next page" variant="ghost">
             ›
           </IconButton>
         </Pagination.NextTrigger>
       </ButtonGroup>
-      <Pagination.PageText format="long" ml="3" fontSize="sm" color="fg.muted" />
-      {/* count kept for a11y when single page edge cases */}
-      <span hidden>{count}</span>
     </Pagination.Root>
   );
 }

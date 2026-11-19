@@ -5,6 +5,8 @@ import {
   Button,
   Heading,
   HStack,
+  IconButton,
+  Image,
   Input,
   Stack,
   Table,
@@ -193,72 +195,90 @@ export default function StreamsEditorPage() {
     }
   }
 
+  function shareHint(offer: OfferRow): string {
+    if (offer.removed) return "removed";
+    if (offer.pinned) return "pinned";
+    return "free";
+  }
+
   function renderOfferRow(offer: OfferRow) {
     const draft = percentDraft[offer.offer_id] ?? String(displayPercent(offer));
     return (
       <Table.Row
         key={offer.offer_id}
-        opacity={offer.removed ? 0.55 : 1}
-        bg={offer.removed ? "bg.muted" : undefined}
+        bg={offer.removed ? "bg.subtle" : "bg"}
       >
         <Table.Cell>
-          {offer.name ?? `Offer ${offer.offer_id}`}
-          {offer.pinned ? (
-            <StatusBadge label="pinned" tone="blue" />
-          ) : null}
-          {offer.removed ? (
-            <StatusBadge label="removed" tone="gray" />
-          ) : null}
+          <Text fontSize="sm" fontWeight="medium" color="gray.fg">
+            {offer.offer_id} {offer.name ?? ""}
+          </Text>
         </Table.Cell>
         <Table.Cell>
           {offer.removed ? (
-            <Text>0%</Text>
+            <Stack gap="0">
+              <Text fontSize="sm">0%</Text>
+              <Text fontSize="xs" color="fg.muted">
+                removed
+              </Text>
+            </Stack>
           ) : (
-            <HStack>
-              <Input
-                size="sm"
-                maxW="20"
-                value={draft}
-                aria-label={`Share for ${offer.offer_id}`}
-                onChange={(e) =>
-                  setPercentDraft((prev) => ({
-                    ...prev,
-                    [offer.offer_id]: e.target.value,
-                  }))
-                }
-                onBlur={() => {
-                  const n = Number(draft);
-                  if (
-                    !Number.isInteger(n) ||
-                    n < 1 ||
-                    n > 100 ||
-                    n === offer.percent
-                  ) {
-                    setPercentDraft((prev) => {
-                      const next = { ...prev };
-                      delete next[offer.offer_id];
-                      return next;
-                    });
-                    return;
+            <Stack gap="0">
+              <HStack>
+                <Input
+                  size="sm"
+                  maxW="16"
+                  value={draft}
+                  aria-label={`Share for ${offer.offer_id}`}
+                  onChange={(e) =>
+                    setPercentDraft((prev) => ({
+                      ...prev,
+                      [offer.offer_id]: e.target.value,
+                    }))
                   }
-                  void runAction({
-                    action: "set_percent",
-                    offer_id: offer.offer_id,
-                    percent: n,
-                  });
-                }}
-              />
-              <Text fontSize="sm">%</Text>
-            </HStack>
+                  onBlur={() => {
+                    const n = Number(draft);
+                    if (
+                      !Number.isInteger(n) ||
+                      n < 1 ||
+                      n > 100 ||
+                      n === offer.percent
+                    ) {
+                      setPercentDraft((prev) => {
+                        const next = { ...prev };
+                        delete next[offer.offer_id];
+                        return next;
+                      });
+                      return;
+                    }
+                    void runAction({
+                      action: "set_percent",
+                      offer_id: offer.offer_id,
+                      percent: n,
+                    });
+                  }}
+                />
+                <Text fontSize="sm">%</Text>
+              </HStack>
+              <Text fontSize="xs" color="fg.muted">
+                {shareHint(offer)}
+              </Text>
+            </Stack>
           )}
         </Table.Cell>
         <Table.Cell>
-          <HStack gap="1" flexWrap="wrap">
+          <Text color="fg.muted">—</Text>
+        </Table.Cell>
+        <Table.Cell>
+          <Text color="fg.muted">—</Text>
+        </Table.Cell>
+        <Table.Cell>
+          <HStack gap="2" justify="center">
             {offer.removed ? (
-              <Button
+              <IconButton
                 size="sm"
                 variant="outline"
                 colorPalette="cyan"
+                aria-label="Bring back"
                 onClick={() =>
                   void runAction({
                     action: "restore",
@@ -266,14 +286,15 @@ export default function StreamsEditorPage() {
                   })
                 }
               >
-                Bring back
-              </Button>
+                <Image src="/icons/undo.svg" alt="" boxSize="4" />
+              </IconButton>
             ) : (
               <>
-                <Button
+                <IconButton
                   size="sm"
                   variant="outline"
-                  colorPalette="cyan"
+                  colorPalette="blue"
+                  aria-label={offer.pinned ? "Unpin" : "Pin"}
                   onClick={() =>
                     void runAction({
                       action: offer.pinned ? "unpin" : "pin",
@@ -281,12 +302,17 @@ export default function StreamsEditorPage() {
                     })
                   }
                 >
-                  {offer.pinned ? "Unpin" : "Pin"}
-                </Button>
-                <Button
+                  <Image
+                    src={offer.pinned ? "/icons/pin-off.svg" : "/icons/pin.svg"}
+                    alt=""
+                    boxSize="4"
+                  />
+                </IconButton>
+                <IconButton
                   size="sm"
                   variant="outline"
-                  colorPalette="cyan"
+                  colorPalette="red"
+                  aria-label="Remove"
                   onClick={() =>
                     void runAction({
                       action: "remove",
@@ -294,8 +320,8 @@ export default function StreamsEditorPage() {
                     })
                   }
                 >
-                  Remove
-                </Button>
+                  <Image src="/icons/trash-2.svg" alt="" boxSize="4" />
+                </IconButton>
               </>
             )}
           </HStack>
@@ -312,8 +338,12 @@ export default function StreamsEditorPage() {
 
   return (
     <AppShell title="Companies / Streams">
-      <Stack gap="6">
-        <Heading size="xl" color="blue.fg" fontFamily="heading">
+      <Stack gap="4">
+        <Heading
+          textStyle="pageTitle"
+          color="gray.fg"
+          fontFamily="heading"
+        >
           Streams
         </Heading>
 
@@ -345,12 +375,14 @@ export default function StreamsEditorPage() {
               rounded="md"
               p="4"
             >
-              <Heading as="h2" size="sm" mb="2">
+              <Heading as="h2" textStyle="md.semibold" mb="2">
                 Google
               </Heading>
               <Text color="fg.muted" fontSize="sm">
                 {googleStream
-                  ? `${company.geo_codes.join(", ") || "no geo"} · no offers`
+                  ? company.geo_codes.length
+                    ? `${company.geo_codes.join(", ")} · no offers`
+                    : "No offers"
                   : "No google stream"}
               </Text>
             </Box>
@@ -364,7 +396,7 @@ export default function StreamsEditorPage() {
                 rounded="md"
                 p="4"
               >
-                <Heading as="h2" size="sm">
+                <Heading as="h2" textStyle="md.semibold">
                   Plain #{s.position}
                 </Heading>
                 <Text color="fg.muted" fontSize="sm">
@@ -379,51 +411,64 @@ export default function StreamsEditorPage() {
               borderColor="border.subtle"
               rounded="md"
               p="4"
-              borderLeftWidth="4px"
-              borderLeftColor={
-                sync === "update_mode" ? "orange.fg" : "border.subtle"
-              }
             >
               <HStack justify="space-between" mb="2" flexWrap="wrap" gap="2">
-                <Heading as="h2" size="sm">
+                <Heading as="h2" textStyle="md.semibold">
                   Offers
                 </Heading>
                 {sync ? (
                   <StatusBadge
                     label={sync === "update_mode" ? "update mode" : "synced"}
-                    tone={sync === "update_mode" ? "orange" : "cyan"}
+                    tone={sync === "update_mode" ? "orange" : "green"}
                   />
                 ) : null}
               </HStack>
-              <Text color="fg.muted" fontSize="sm" mb="4">
+              <Text color="fg.muted" fontSize="sm" mb="3">
                 Unpublished. Push sends active offers. Removed offers stay in
                 the archive. Fetch waits for Push or Cancel.
                 {dirty ? " Local queue has pending actions." : ""}
               </Text>
 
-              <Table.Root size="sm" variant="outline">
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader>Offer</Table.ColumnHeader>
-                    <Table.ColumnHeader>Share</Table.ColumnHeader>
-                    <Table.ColumnHeader>Actions</Table.ColumnHeader>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>{offers.map(renderOfferRow)}</Table.Body>
-              </Table.Root>
+              <Box overflowX="auto">
+                <Table.Root size="sm" variant="outline">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader color="fg.muted" fontSize="xs">
+                        Offer
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontSize="xs">
+                        Share
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontSize="xs">
+                        Stats
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontSize="xs">
+                        Trends
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader
+                        color="fg.muted"
+                        fontSize="xs"
+                        w="20"
+                      >
+                        Actions
+                      </Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>{offers.map(renderOfferRow)}</Table.Body>
+                </Table.Root>
+              </Box>
 
-              <Text mt="3" fontSize="sm" color="fg.muted">
+              <Text mt="3" fontSize="sm" fontWeight="medium" color="gray.fg">
                 Total {totalActive}
-                {queueItems.length
-                  ? ` · queue ${queueItems.length}`
-                  : ""}
+                {queueItems.length ? ` · queue ${queueItems.length}` : ""}
               </Text>
 
-              <HStack mt="4" align="end" flexWrap="wrap" gap="2">
-                <Box flex="1" minW="240px">
+              <HStack mt="4" align="center" flexWrap="wrap" gap="2">
+                <Box flex="1" minW="200px">
                   <OfferCombobox
                     value={selectedOffer}
                     onChange={setSelectedOffer}
+                    label=""
                   />
                 </Box>
                 <Button
@@ -473,6 +518,7 @@ export default function StreamsEditorPage() {
                   colorPalette="cyan"
                   loading={fetchState.isLoading}
                   disabled={fetchDisabled}
+                  opacity={fetchDisabled ? 0.4 : 1}
                   title={
                     fetchDisabled
                       ? "Fetch requires synced flow and empty local queue"

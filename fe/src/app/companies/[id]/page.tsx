@@ -9,7 +9,6 @@ import {
   Input,
   SimpleGrid,
   Stack,
-  Table,
   Text,
 } from "@chakra-ui/react";
 import Link from "next/link";
@@ -95,7 +94,7 @@ export default function CompanyCardPage() {
 
   return (
     <AppShell title={company ? `Companies / ${company.name}` : "Company"}>
-      <Stack gap="6">
+      <Stack gap="4">
         {companyQuery.isError ? (
           <Text color="fg.error">{getErrorMessage(companyQuery.error)}</Text>
         ) : null}
@@ -108,31 +107,33 @@ export default function CompanyCardPage() {
         {company ? (
           <>
             <Stack gap="2">
-              <Heading size="xl" color="blue.fg" fontFamily="heading">
+              <Heading textStyle="pageTitle" color="gray.fg">
                 {company.name}
               </Heading>
-              <Text color="fg.muted" fontSize="sm">
+              <Text color="fg.muted" textStyle="muted">
                 version {company.version} · {company.lifecycle}
               </Text>
               <HStack gap="2" flexWrap="wrap">
                 <StatusBadge
-                  label={company.lifecycle}
-                  tone={company.lifecycle === "ready" ? "green" : "orange"}
-                />
-                <StatusBadge
                   label={company.traffic_status}
-                  tone={company.traffic_status === "active" ? "green" : "gray"}
+                  tone={company.traffic_status === "active" ? "green" : "red"}
                 />
                 {company.sync ? (
                   <StatusBadge
                     label={
                       company.sync === "update_mode" ? "update mode" : "synced"
                     }
-                    tone={company.sync === "update_mode" ? "orange" : "cyan"}
+                    tone={company.sync === "update_mode" ? "orange" : "green"}
                   />
                 ) : null}
-                {company.geo_codes.map((g) => (
-                  <StatusBadge key={g} label={g} tone="blue" />
+                {company.geo_codes.map((g, i) => (
+                  <StatusBadge
+                    key={g}
+                    label={g}
+                    tone={
+                      i === 0 ? "blue" : i === 1 ? "cyan" : "purple"
+                    }
+                  />
                 ))}
               </HStack>
             </Stack>
@@ -142,7 +143,7 @@ export default function CompanyCardPage() {
               reconcileUnavailable={company.reconcile_unavailable}
             />
 
-            <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap="3">
               {(
                 [
                   ["Clicks", statsQuery.data?.clicks],
@@ -158,11 +159,18 @@ export default function CompanyCardPage() {
                   rounded="md"
                   p="4"
                 >
-                  <Text fontSize="sm" color="fg.muted">
+                  <Text fontSize="xs" fontWeight="medium" color="fg.muted">
                     {label}
                   </Text>
-                  <Text fontSize="2xl" fontWeight="semibold" color="gray.fg">
-                    {value == null ? "—" : value.toLocaleString()}
+                  <Text
+                    fontSize="2xl"
+                    fontWeight="semibold"
+                    color="gray.fg"
+                    mt="2"
+                  >
+                    {value == null
+                      ? "—"
+                      : value.toLocaleString("en-US").replace(/,/g, " ")}
                   </Text>
                 </Box>
               ))}
@@ -186,7 +194,7 @@ export default function CompanyCardPage() {
                 <Field.Label>Geo codes</Field.Label>
                 <HStack>
                   <Input
-                    value={geoInput ?? company.geo_codes.join(",")}
+                    value={geoInput ?? company.geo_codes.join(", ")}
                     onChange={(e) => setGeoInput(e.target.value)}
                     aria-label="Geo codes"
                   />
@@ -203,41 +211,51 @@ export default function CompanyCardPage() {
               </Field.Root>
             </Box>
 
-            <Stack gap="3">
-              <Heading as="h2" size="md">
+            <Stack gap="2">
+              <Heading as="h2" textStyle="sm.medium" color="gray.fg">
                 Streams
               </Heading>
-              <Table.Root size="sm" variant="outline" bg="bg">
-                <Table.Body>
-                  {offerNames.map((o) => (
-                    <Table.Row key={o.offer_id}>
-                      <Table.Cell>
-                        {o.name ?? `Offer ${o.offer_id}`}
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                  {offerNames.length === 0 ? (
-                    <Table.Row>
-                      <Table.Cell>
-                        <Text color="fg.muted">No active offers</Text>
-                      </Table.Cell>
-                    </Table.Row>
-                  ) : null}
-                </Table.Body>
-              </Table.Root>
-              <HStack justify="flex-end">
-                <Button
-                  asChild
-                  size="sm"
-                  variant="solid"
-                  colorPalette="blue"
-                  disabled={company.lifecycle !== "ready"}
-                >
-                  <Link href={`/companies/${company.id}/streams`}>
-                    View details
-                  </Link>
-                </Button>
-              </HStack>
+              <Box
+                bg="bg"
+                borderWidth="1px"
+                borderColor="border.subtle"
+                rounded="md"
+                overflow="hidden"
+              >
+                {offerNames.map((o) => (
+                  <Box
+                    key={o.offer_id}
+                    px="4"
+                    py="3"
+                    borderBottomWidth="1px"
+                    borderColor="border.subtle"
+                  >
+                    <Text fontSize="sm" fontWeight="medium" color="gray.fg">
+                      {o.name ?? `Offer ${o.offer_id}`}
+                    </Text>
+                  </Box>
+                ))}
+                {offerNames.length === 0 ? (
+                  <Box px="4" py="3">
+                    <Text color="fg.muted" fontSize="sm">
+                      No active offers
+                    </Text>
+                  </Box>
+                ) : null}
+                <HStack justify="flex-end" px="4" py="3">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    colorPalette="cyan"
+                    disabled={company.lifecycle !== "ready"}
+                  >
+                    <Link href={`/companies/${company.id}/streams`}>
+                      View details
+                    </Link>
+                  </Button>
+                </HStack>
+              </Box>
             </Stack>
           </>
         ) : companyQuery.isLoading ? (

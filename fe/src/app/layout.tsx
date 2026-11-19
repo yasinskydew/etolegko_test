@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { ColorModeScript } from "@/components/providers/ColorModeScript";
 import { Provider } from "@/components/providers/Provider";
 
-const bodyFont = Source_Sans_3({
+/** Figma `fonts/body` = Inter — single family for heading + body. */
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-body",
-});
-
-const headingFont = Source_Serif_4({
-  subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,11 +22,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${bodyFont.variable} ${headingFont.variable}`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         <ColorModeScript />
       </head>
-      <body>
+      <body className={inter.className}>
         <Provider>{children}</Provider>
       </body>
     </html>

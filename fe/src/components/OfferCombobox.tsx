@@ -87,9 +87,9 @@ export function OfferCombobox({
       value={value ? [String(value.offer_id)] : []}
       width="full"
     >
-      <Combobox.Label>{label}</Combobox.Label>
+      {label ? <Combobox.Label>{label}</Combobox.Label> : null}
       <Combobox.Control>
-        <Combobox.Input placeholder="Search offers" />
+        <Combobox.Input placeholder="Search offers" aria-label={label || "Search offers"} />
         <Combobox.IndicatorGroup>
           <Combobox.ClearTrigger />
           <Combobox.Trigger />
