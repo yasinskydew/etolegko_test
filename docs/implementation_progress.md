@@ -11,10 +11,10 @@
 | 5. Миграция | done | 2026-11-19 |
 | 6. JWT | done | 2026-11-19 |
 | 7. Домен | done | 2026-11-19 |
-| 8. Пустой frontend | pending | — |
-| 9. RTK Query | pending | — |
-| 10. Базовые компоненты | pending | — |
-| 11. Страницы | pending | — |
+| 8. Пустой frontend | done | 2026-11-19 |
+| 9. RTK Query | done | 2026-11-19 |
+| 10. Базовые компоненты | done | 2026-11-19 |
+| 11. Страницы | done | 2026-11-19 |
 | 12. Тестирование | pending | — |
 
 ---
@@ -162,57 +162,83 @@
 
 ## Фаза 8. Пустой frontend
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `fe/` — Next.js 15 App Router, TypeScript, client render
+- `ChakraProvider` + `ColorModeScript` (светлая тема по умолчанию через next-themes)
+- Минимальная homepage-shell; API-страниц нет
+- `fe/Dockerfile` (standalone), сервис `frontend` в `docker-compose.yml` на `:3000`
+- `CORS_ORIGIN` / `NEXT_PUBLIC_API_URL` в `.env.example`
+- Зависимости: next, react, `@chakra-ui/react` v3, `@reduxjs/toolkit`, `react-redux`
 
 ### Комментарии
 
-—
+- Без `NAME_PREFIX` / `GET /config`
+- Backend не менялся
 
 ---
 
 ## Фаза 9. RTK Query
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Один API slice `fe/src/store/api.ts` → `NEXT_PUBLIC_API_URL`
+- JWT в `localStorage` (`etolegko:jwt`), отдельно от очереди
+- Очередь `company:{id}:tab:{tabId}` в `fe/src/lib/actionQueue.ts` — вне RTK
+- Теги: `companies`, `company`, `offers`, `stats`; инвалидация после мутаций
 
 ### Комментарии
 
-—
+- `tabId` в `sessionStorage`, чтобы вкладки не пересекались
 
 ---
 
 ## Фаза 10. Базовые компоненты
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- Тема `fe/src/theme/index.ts`: семантические токены `bg.subtle` / `bg` / `gray.fg` / blue / cyan
+- `AppShell` (sidebar Companies/Offers; streams только из карточки), Drawer на `base`, `md` 200px, `lg` 240px
+- `TrafficToggle`, `CreateCompanyModal`, `OfferCombobox`, `DriftAlert`, `StatusBadge`, `PagePagination`
 
 ### Комментарии
 
-—
+- Свои hex/CSS не писались; UI на Chakra v3
 
 ---
 
 ## Фаза 11. Страницы
 
-**Статус:** pending
+**Статус:** done  
+**Дата:** 2026-11-19
 
 ### Результат
 
-—
+- `/login` — бренд + форма
+- `/companies` — search, pagination, Enable/Disable
+- Create company modal + ошибка имени (`name_taken`)
+- `/companies/[id]` — traffic toggle, имена офферов, View details, drift alert без Fetch, geo patch
+- `/offers` — read-only каталог
+- `/companies/[id]/streams` — shares, pin/unpin, Remove, Bring back, Add, Push, Cancel, Fetch
+- localStorage queue; Fetch disabled при `update_mode` или непустой очереди
+- Доли берутся из ответа API (без клиентского WeightUtil как истины)
+- Клиентский запрет pin/`set_percent` последнего свободного до запроса
 
 ### Комментарии
 
-—
+- Push/Fetch/Cancel только в редакторе; traffic на карточке (+ Enable/Disable в списке по фазе 11)
+- Нет `GET /geo` в API — гео как comma-separated поле
+- UI English; состав экранов по Figma, не пиксель-пёрфект
+- Колонки Stats/Trends из макета редактора не подключены (нет данных в actions API)
 
 ---
 
