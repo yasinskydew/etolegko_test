@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.clients.keitaro import KeitaroCampaign
 from app.errors import AppError
-from app.repositories import CompanyRepository, IdempotencyKeyRepository, StreamRepository
+from app.repositories import (
+    CompanyRepository,
+    IdempotencyKeyRepository,
+    StreamRepository,
+)
 from tests.conftest import MockKeitaroClient, create_ready_company, offers_stream
 
 TWO_OFFERS = [
