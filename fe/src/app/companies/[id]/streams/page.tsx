@@ -211,7 +211,7 @@ export default function StreamsEditorPage() {
                 size="sm"
                 maxW="16"
                 value={draft}
-                disabled={offer.pinned}
+                disabled={!offer.pinned}
                 aria-label={`Share for ${offer.offer_id}`}
                 onChange={(e) =>
                   setPercentDraft((prev) => ({
