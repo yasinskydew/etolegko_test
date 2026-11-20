@@ -68,8 +68,28 @@ export type OfferCatalogResponse = {
   items: OfferCatalogItem[];
 };
 
+/** Mirrors backend `ErrorCode`; `network_error` is client-side only. */
+export type ApiErrorCode =
+  | "unauthorized"
+  | "not_found"
+  | "method_not_allowed"
+  | "name_taken"
+  | "idempotency_conflict"
+  | "company_not_ready"
+  | "campaign_missing"
+  | "concurrent_update"
+  | "keitaro_not_found"
+  | "validation_error"
+  | "unknown_geo"
+  | "keitaro_bad_gateway"
+  | "keitaro_partial_apply"
+  | "keitaro_timeout"
+  | "internal_error"
+  | "network_error";
+
+/** Body of every non-2xx backend response (OpenAPI `ErrorBody`). */
 export type ApiErrorBody = {
-  error: string;
+  error: ApiErrorCode;
   message: string;
   fields?: Record<string, string>;
 };

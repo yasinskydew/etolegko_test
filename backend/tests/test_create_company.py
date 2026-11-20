@@ -140,4 +140,4 @@ async def test_stuck_creating_blocks_apply(
         },
     )
     assert apply.status_code == 409
-    assert apply.json()["error"] == "validation_error"
+    assert apply.json()["error"] == "company_not_ready"

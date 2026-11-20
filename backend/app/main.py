@@ -3,13 +3,21 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.clients.keitaro import init_keitaro, shutdown_keitaro
 from app.db import session as db_session
 from app.db.session import engine
-from app.errors import AppError, app_error_handler
+from app.errors import (
+    AppError,
+    app_error_handler,
+    http_error_handler,
+    unhandled_error_handler,
+    validation_error_handler,
+)
 from app.openapi_meta import APP_DESCRIPTION, OPENAPI_TAGS
 from app.repositories import CompanyRepository
 from app.routers import auth, companies, offers
@@ -49,6 +57,9 @@ app = FastAPI(
     license_info={"name": "Proprietary"},
 )
 app.add_exception_handler(AppError, app_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(StarletteHTTPException, http_error_handler)
+app.add_exception_handler(Exception, unhandled_error_handler)
 
 cors_origin = os.getenv("CORS_ORIGIN", "http://localhost:3000")
 app.add_middleware(
@@ -104,6 +115,9 @@ def custom_openapi():
                 operation["security"] = []
             else:
                 operation["security"] = [{"HTTPBearer": []}]
+    # Validation errors use ErrorBody (see validation_error_handler), not FastAPI's default.
+    for name in ("HTTPValidationError", "ValidationError"):
+        schema["components"].get("schemas", {}).pop(name, None)
     app.openapi_schema = schema
     return app.openapi_schema
 

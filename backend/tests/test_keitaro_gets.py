@@ -64,7 +64,7 @@ def test_map_keitaro_http_error_404_distinguishable() -> None:
     err = _map_keitaro_http_error(response)
     assert isinstance(err, AppError)
     assert err.error == KEITARO_NOT_FOUND
-    assert err.status_code == 502
+    assert err.status_code == 409
     assert "Campaign not found" in err.message
 
 

@@ -24,7 +24,7 @@ class CompanyWriteGuard:
             raise AppError(404, "not_found", "Company not found.")
         if company.lifecycle != CompanyLifecycle.ready:
             raise AppError(
-                409, "validation_error", f"Company is {company.lifecycle.value}."
+                409, "company_not_ready", f"Company is {company.lifecycle.value}."
             )
         return company
 

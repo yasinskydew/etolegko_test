@@ -71,8 +71,8 @@ async def list_companies(
         "`creating` rows older than 5 minutes are marked `failed`."
     ),
     responses={
-        201: {"description": "Company created (`lifecycle=ready`)."},
-        200: {"description": "Idempotent replay of the same key and payload."},
+        201: {"description": "Company created (`lifecycle=ready`); `Location` header set."},
+        200: {"description": "Idempotent replay of the same key and payload; `Location` set."},
         **RESP_COMPANY,
     },
 )
@@ -89,6 +89,7 @@ async def create_company(
 ) -> CompanyOut:
     company, status_code = await use_case.execute(body, idempotency_key or "")
     response.status_code = status_code
+    response.headers["Location"] = f"/companies/{company.id}"
     return company
 
 

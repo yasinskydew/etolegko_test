@@ -1,5 +1,5 @@
 import { toaster } from "@/components/ui/toaster";
-import { getErrorMessage } from "@/store/api";
+import { describeError } from "@/store/api";
 
 type ToastMutationOptions<T> = {
   loading?: string;
@@ -9,7 +9,7 @@ type ToastMutationOptions<T> = {
 
 /**
  * Universal toaster.promise wrapper for RTK Query `.unwrap()` promises.
- * loading → success / error (description from API message/detail).
+ * loading → success / error (description from API ErrorBody message + fields).
  */
 export async function toastMutation<T>(
   promise: Promise<T>,
@@ -25,7 +25,7 @@ export async function toastMutation<T>(
     }),
     error: (err) => ({
       title: options.errorTitle ?? "Error",
-      description: getErrorMessage(err),
+      description: describeError(err),
       meta: { closable: true },
     }),
   });

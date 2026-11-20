@@ -25,8 +25,6 @@ class CompanyQueryService:
     async def list_companies(
         self, *, q: str | None, page: int, page_size: int
     ) -> CompanyListResponse:
-        page = max(page, 1)
-        page_size = min(max(page_size, 1), 100)
         items, total = await self._uow.companies.list_paginated(
             q=q, page=page, page_size=page_size
         )
