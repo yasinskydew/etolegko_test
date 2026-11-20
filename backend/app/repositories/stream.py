@@ -70,12 +70,3 @@ class StreamRepository:
             offer.stream_id = stream_id
             self._session.add(offer)
         await self._session.flush()
-
-    async def add_offer(self, offer: StreamOffer) -> StreamOffer:
-        self._session.add(offer)
-        await self._session.flush()
-        return offer
-
-    async def delete_offer(self, offer: StreamOffer) -> None:
-        await self._session.delete(offer)
-        await self._session.flush()

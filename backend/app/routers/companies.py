@@ -1,6 +1,4 @@
-from typing import Annotated, Any
-
-from fastapi import APIRouter, Body, Depends, Header, Path, Query, Response, status
+from fastapi import APIRouter, Depends, Header, Path, Query, Response, status
 
 from app.deps import get_company_service, get_current_user
 from app.openapi_meta import RESP_COMPANY, RESP_PROTECTED
@@ -9,9 +7,7 @@ from app.schemas.company import (
     CompanyListResponse,
     CompanyOut,
     CreateCompanyRequest,
-    GeoPatchRequest,
     StatsOut,
-    StreamActionRequest,
 )
 from app.services.company_service import CompanyService
 
@@ -86,7 +82,7 @@ async def create_company(
     response_model=CompanyOut,
     summary="Get company card",
     description=(
-        "Full company including streams, archive offers, computed `sync` and `drift`."
+        "Full company including streams, archive offers and computed `drift`."
     ),
     responses={200: {"description": "Company card."}, **RESP_COMPANY},
 )
@@ -136,56 +132,6 @@ async def company_stats(
 
 
 @router.post(
-    "/{company_id}/streams/{stream_id}/actions",
-    response_model=CompanyOut,
-    summary="Apply offers-stream action",
-    description=(
-        "Apply one editor action on an `offers` stream. "
-        "Preferred editor path is FE draft + PUT /companies/{id}."
-    ),
-    responses={200: {"description": "Updated company."}, **RESP_COMPANY},
-)
-async def stream_actions(
-    company_id: int = Path(description="Local company id.", ge=1),
-    stream_id: int = Path(description="Local `offers` stream id.", ge=1),
-    body: StreamActionRequest = ...,
-    _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
-) -> CompanyOut:
-    return await service.apply_action(company_id, stream_id, body)
-
-
-@router.post(
-    "/{company_id}/sync",
-    response_model=CompanyOut,
-    summary="Push offers stream to Keitaro",
-    description="Publish current DB offers to Keitaro. Prefer PUT apply from FE draft.",
-    responses={200: {"description": "Pushed; `sync=synced`."}, **RESP_COMPANY},
-)
-async def push_company(
-    company_id: int = Path(description="Local company id.", ge=1),
-    _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
-) -> CompanyOut:
-    return await service.push(company_id)
-
-
-@router.post(
-    "/{company_id}/cancel",
-    response_model=CompanyOut,
-    summary="Cancel local draft (no-op on DB)",
-    description="Returns current DB company. FE clears localStorage draft.",
-    responses={200: {"description": "Current DB state."}, **RESP_COMPANY},
-)
-async def cancel_company(
-    company_id: int = Path(description="Local company id.", ge=1),
-    _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
-) -> CompanyOut:
-    return await service.cancel(company_id)
-
-
-@router.post(
     "/{company_id}/fetch",
     response_model=CompanyOut,
     summary="Fetch streams from Keitaro",
@@ -203,25 +149,6 @@ async def fetch_company(
     return await service.fetch(company_id)
 
 
-@router.patch(
-    "/{company_id}/geo",
-    response_model=CompanyOut,
-    summary="Update company geo (Keitaro first)",
-    description=(
-        "Update google-stream country filter in Keitaro, then persist `company_geo`. "
-        "Company name is immutable. Tracker failure leaves DB unchanged."
-    ),
-    responses={200: {"description": "Geo updated."}, **RESP_COMPANY},
-)
-async def patch_geo(
-    company_id: int = Path(description="Local company id.", ge=1),
-    body: GeoPatchRequest = ...,
-    _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
-) -> CompanyOut:
-    return await service.patch_geo(company_id, body)
-
-
 @router.post(
     "/{company_id}/enable",
     response_model=CompanyOut,
@@ -234,8 +161,6 @@ async def patch_geo(
 )
 async def enable_company(
     company_id: int = Path(description="Local company id.", ge=1),
-    # Body optional: VersionBody removed in system-update-1; ignore leftover payloads.
-    _body: Annotated[dict[str, Any] | None, Body()] = None,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:
@@ -254,7 +179,6 @@ async def enable_company(
 )
 async def disable_company(
     company_id: int = Path(description="Local company id.", ge=1),
-    _body: Annotated[dict[str, Any] | None, Body()] = None,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:

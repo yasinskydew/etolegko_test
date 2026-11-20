@@ -9,7 +9,6 @@ from app.schemas.company import (
     OfferRow,
     StreamOut,
 )
-from app.services.sync_status import compute_company_sync, compute_stream_sync
 
 
 def _offer_name(cache: dict[int, str | None], offer_id: int) -> str | None:
@@ -35,7 +34,6 @@ def map_stream(
         id=stream.id,
         type=stream.type,
         position=stream.position,
-        sync=compute_stream_sync(stream),
         offers=offers if stream.type == StreamType.offers else [],
     )
 
@@ -48,10 +46,6 @@ def map_company_list_item(company: Company) -> CompanyListItem:
         lifecycle=company.lifecycle,
         traffic_status=company.traffic_status,
         geo_codes=geo_codes,
-        sync=compute_company_sync(
-            list(company.streams),
-            company.lifecycle.value,
-        ),
     )
 
 
@@ -74,7 +68,6 @@ def map_company(
         lifecycle=company.lifecycle,
         traffic_status=company.traffic_status,
         geo_codes=geo_codes,
-        sync=compute_company_sync(list(company.streams), company.lifecycle.value),
         streams=streams,
         drift=None if reconcile_unavailable else drift,
         reconcile_unavailable=reconcile_unavailable,

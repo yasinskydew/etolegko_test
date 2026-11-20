@@ -117,7 +117,7 @@ export default function CompanyEditPage() {
     company?.streams.filter((s) => s.type === "plain") ?? [];
 
   const syncUi = company
-    ? syncDisplayForCard(company.sync, company.drift, dirty)
+    ? syncDisplayForCard(company.lifecycle, company.drift, dirty)
     : null;
 
   if (!ready || !authed) return null;

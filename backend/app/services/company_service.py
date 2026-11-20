@@ -35,9 +35,7 @@ from app.schemas.company import (
     CompanyOut,
     CreateCompanyRequest,
     DriftOut,
-    GeoPatchRequest,
     StatsOut,
-    StreamActionRequest,
 )
 from app.services import weight_util
 from app.services.company_mapper import (
@@ -97,9 +95,6 @@ class CompanyService:
         company = await self._companies.get_with_details(company_id)
         if company is None:
             raise AppError(404, "not_found", "Company not found.")
-        if company.lifecycle == CompanyLifecycle.creating:
-            # card allowed; editor blocked separately by callers that need ready
-            pass
 
         name_cache = await build_name_cache(self._keitaro, company)
         drift: DriftOut | None = None
@@ -278,78 +273,6 @@ class CompanyService:
         name_cache = await build_name_cache(self._keitaro, company)
         return map_company(company, name_cache=name_cache, drift=DriftOut()), 201
 
-    async def apply_action(
-        self,
-        company_id: int,
-        stream_id: int,
-        body: StreamActionRequest,
-    ) -> CompanyOut:
-        company = await self._companies.get_by_id_for_update(company_id)
-        if company is None:
-            raise AppError(404, "not_found", "Company not found.")
-        if company.lifecycle != CompanyLifecycle.ready:
-            raise AppError(
-                409,
-                "validation_error",
-                "Company is still creating.",
-            )
-
-        stream = await self._streams.get_by_id(stream_id)
-        if stream is None or stream.company_id != company_id:
-            raise AppError(404, "not_found", "Stream not found.")
-        if stream.type != StreamType.offers:
-            raise AppError(422, "validation_error", "Actions only allowed on offers stream.")
-
-        weights = [
-            OfferWeight(
-                offer_id=o.offer_id,
-                percent=int(o.percent),
-                pinned=bool(o.pinned),
-                removed=bool(o.removed),
-                position=int(o.position),
-            )
-            for o in stream.offers
-        ]
-        try:
-            if body.action == "add":
-                weights = weight_util.apply_add(weights, body.offer_id)
-            elif body.action == "remove":
-                weights = weight_util.apply_remove(weights, body.offer_id)
-            elif body.action == "restore":
-                weights = weight_util.apply_restore(weights, body.offer_id)
-            elif body.action == "pin":
-                weights = weight_util.apply_pin(weights, body.offer_id)
-            elif body.action == "unpin":
-                weights = weight_util.apply_unpin(weights, body.offer_id)
-            elif body.action == "set_percent":
-                if body.percent is None:
-                    raise AppError(
-                        422, "validation_error", "percent is required for set_percent."
-                    )
-                weights = weight_util.apply_set_percent(
-                    weights, body.offer_id, body.percent
-                )
-            else:
-                raise AppError(422, "validation_error", "Unknown action.")
-        except WeightError as exc:
-            raise AppError(422, "validation_error", str(exc)) from exc
-
-        new_offers = [
-            StreamOffer(
-                stream_id=stream.id,
-                offer_id=w.offer_id,
-                percent=w.percent,
-                pinned=w.pinned,
-                removed=w.removed,
-                position=w.position,
-            )
-            for w in weights
-        ]
-        await self._streams.replace_offers(stream.id, new_offers)
-        company.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        return await self.get_company(company_id)
-
     async def apply(self, company_id: int, body: CompanyApplyRequest) -> CompanyOut:
         """Apply full draft: write offers + geo to DB and Keitaro (Push)."""
         company = await self._companies.get_by_id_for_update(company_id)
@@ -419,46 +342,6 @@ class CompanyService:
         await self._companies.replace_geos(company.id, geo_codes)
         company.updated_at = datetime.now(UTC)
         await self._session.commit()
-        return await self.get_company(company_id)
-
-    async def push(self, company_id: int) -> CompanyOut:
-        """Push current DB offers to Keitaro (no draft). Prefer `apply` from FE."""
-        company = await self._companies.get_by_id_for_update(company_id)
-        if company is None:
-            raise AppError(404, "not_found", "Company not found.")
-        if company.lifecycle != CompanyLifecycle.ready:
-            raise AppError(409, "validation_error", "Company is still creating.")
-        if company.keitaro_campaign_id is None:
-            raise AppError(409, "campaign_missing", "Campaign missing in tracker.")
-
-        stream = await self._streams.get_offers_stream(company_id)
-        if stream is None or stream.keitaro_stream_id is None:
-            raise AppError(404, "not_found", "Offers stream not found.")
-
-        participants = [
-            (o.offer_id, int(o.percent))
-            for o in sorted(stream.offers, key=lambda x: x.position)
-            if not o.removed
-        ]
-        try:
-            await self._keitaro.update_stream_offers(
-                campaign_id=company.keitaro_campaign_id,
-                stream_id=stream.keitaro_stream_id,
-                offers=participants,
-            )
-        except AppError:
-            await self._session.rollback()
-            raise
-
-        company.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        return await self.get_company(company_id)
-
-    async def cancel(self, company_id: int) -> CompanyOut:
-        """Cancel is FE-local (clear draft). Endpoint returns current DB state."""
-        company = await self._companies.get_by_id(company_id)
-        if company is None:
-            raise AppError(404, "not_found", "Company not found.")
         return await self.get_company(company_id)
 
     async def fetch(self, company_id: int) -> CompanyOut:
@@ -607,30 +490,6 @@ class CompanyService:
                 await self._streams.delete(s)
 
         await self._streams.replace_offers(offers_stream.id, new_rows)
-        company.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        return await self.get_company(company_id)
-
-    async def patch_geo(self, company_id: int, body: GeoPatchRequest) -> CompanyOut:
-        company = await self._companies.get_by_id_for_update(company_id)
-        if company is None:
-            raise AppError(404, "not_found", "Company not found.")
-        if company.lifecycle != CompanyLifecycle.ready:
-            raise AppError(409, "validation_error", "Company is still creating.")
-        body.geo_codes = await self._validate_geo_codes(body.geo_codes)
-        if company.keitaro_campaign_id is None:
-            raise AppError(409, "campaign_missing", "Campaign missing in tracker.")
-
-        google = await self._streams.get_google_stream(company_id)
-        if google is None or google.keitaro_stream_id is None:
-            raise AppError(404, "not_found", "Google stream not found.")
-
-        await self._keitaro.update_google_geo(
-            campaign_id=company.keitaro_campaign_id,
-            stream_id=google.keitaro_stream_id,
-            geo_codes=body.geo_codes,
-        )
-        await self._companies.replace_geos(company.id, body.geo_codes)
         company.updated_at = datetime.now(UTC)
         await self._session.commit()
         return await self.get_company(company_id)

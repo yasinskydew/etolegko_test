@@ -6,15 +6,13 @@ const company = {
   lifecycle: "ready",
   traffic_status: "active",
   geo_codes: ["MX"],
-  sync: "synced",
   streams: [
-    { id: 1, type: "google", position: 1, sync: null, offers: [] },
+    { id: 1, type: "google", position: 1, offers: [] },
     {
       id: 2,
       type: "offers",
       position: 2,
-      sync: "synced",
-      offers: [
+          offers: [
         {
           offer_id: 3749,
           name: "Offer A",

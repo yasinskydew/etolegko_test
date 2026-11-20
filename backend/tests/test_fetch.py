@@ -44,7 +44,6 @@ async def test_fetch_writes_tracker_shares_without_normalizing(
         },
     )
     assert applied.status_code == 200, applied.text
-    assert offers_stream(applied.json())["sync"] == "synced"
 
     camp_id = next(iter(mock_keitaro._campaigns))
     camp = mock_keitaro._campaigns[camp_id]
@@ -57,7 +56,6 @@ async def test_fetch_writes_tracker_shares_without_normalizing(
     fetched = await client.post(f"/companies/{cid}/fetch", headers=auth_headers)
     assert fetched.status_code == 200, fetched.text
     stream = offers_stream(fetched.json())
-    assert stream["sync"] == "synced"
     by_id = {o["offer_id"]: o["percent"] for o in stream["offers"] if not o["removed"]}
     assert by_id == {3749: 70, 3801: 30}
 
@@ -72,7 +70,6 @@ async def test_fetch_unknown_geo_422(
         client, auth_headers, name="test_yasinsky_company_fetch_geo"
     )
     cid = company["id"]
-    assert offers_stream(company)["sync"] == "synced"
 
     camp_id = next(iter(mock_keitaro._campaigns))
     camp = mock_keitaro._campaigns[camp_id]

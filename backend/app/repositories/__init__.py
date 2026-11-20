@@ -1,4 +1,3 @@
-from app.repositories.base import Repository
 from app.repositories.company import CompanyRepository
 from app.repositories.geo import GeoRepository
 from app.repositories.idempotency import IdempotencyKeyRepository
@@ -9,7 +8,6 @@ __all__ = [
     "CompanyRepository",
     "GeoRepository",
     "IdempotencyKeyRepository",
-    "Repository",
     "StreamRepository",
     "UserRepository",
 ]
