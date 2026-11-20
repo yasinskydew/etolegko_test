@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.clients.keitaro import KeitaroCampaign, KeitaroClient
+from app.errors import AppError
 from app.models import Company, Stream, StreamType
 from app.schemas.company import (
     CompanyListItem,
@@ -161,6 +162,9 @@ async def build_name_cache(
         for offer in stream.offers:
             offer_ids.add(offer.offer_id)
     for offer_id in offer_ids:
-        offer = await keitaro.get_offer(offer_id)
+        try:
+            offer = await keitaro.get_offer(offer_id)
+        except AppError:
+            offer = None
         cache[offer_id] = offer.name if offer else None
     return cache

@@ -4,6 +4,7 @@ import enum
 class CompanyLifecycle(str, enum.Enum):
     creating = "creating"
     ready = "ready"
+    failed = "failed"
 
 
 class TrafficStatus(str, enum.Enum):

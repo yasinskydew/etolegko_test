@@ -7,7 +7,7 @@ MockKeitaroClient / httpx.MockTransport. KEITARO_URL from .env is cleared.
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -119,6 +119,8 @@ class MockKeitaroClient(NoopKeitaroClient):
         self.fail_enable: Exception | None = None
         self.fail_disable: Exception | None = None
         self.fail_delete: Exception | None = None
+        self.fail_update_geo: Exception | None = None
+        self.on_tracker_write: Callable[[], Awaitable[None]] | None = None
         self.calls: dict[str, int] = {
             "create": 0,
             "delete": 0,
@@ -128,6 +130,10 @@ class MockKeitaroClient(NoopKeitaroClient):
             "get_campaign": 0,
             "update_google_geo": 0,
         }
+
+    async def _hook(self) -> None:
+        if self.on_tracker_write is not None:
+            await self.on_tracker_write()
 
     async def create_company_campaign(
         self,
@@ -161,6 +167,7 @@ class MockKeitaroClient(NoopKeitaroClient):
         offers: list[tuple[int, int]],
     ) -> None:
         self.calls["update_stream_offers"] += 1
+        await self._hook()
         if self.fail_update_offers is not None:
             raise self.fail_update_offers
         await super().update_stream_offers(
@@ -177,6 +184,7 @@ class MockKeitaroClient(NoopKeitaroClient):
 
     async def disable_campaign(self, campaign_id: int) -> None:
         self.calls["disable"] += 1
+        await self._hook()
         if self.fail_disable is not None:
             raise self.fail_disable
         await super().disable_campaign(campaign_id)
@@ -193,6 +201,9 @@ class MockKeitaroClient(NoopKeitaroClient):
         geo_codes: list[str],
     ) -> None:
         self.calls["update_google_geo"] += 1
+        await self._hook()
+        if self.fail_update_geo is not None:
+            raise self.fail_update_geo
         await super().update_google_geo(
             campaign_id=campaign_id,
             stream_id=stream_id,

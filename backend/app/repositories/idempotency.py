@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import IdempotencyKey
@@ -18,3 +18,8 @@ class IdempotencyKeyRepository:
         self._session.add(row)
         await self._session.flush()
         return row
+
+    async def delete_for_company(self, company_id: int) -> None:
+        await self._session.execute(
+            delete(IdempotencyKey).where(IdempotencyKey.company_id == company_id)
+        )

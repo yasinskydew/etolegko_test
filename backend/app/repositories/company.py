@@ -1,8 +1,10 @@
-from sqlalchemy import func, select
+from datetime import datetime, timedelta
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Company, CompanyGeo, Stream
+from app.models import Company, CompanyGeo, CompanyLifecycle, Stream, TrafficStatus
 
 
 class CompanyRepository:
@@ -20,6 +22,46 @@ class CompanyRepository:
             select(Company).where(Company.id == company_id).with_for_update()
         )
         return result.scalar_one_or_none()
+
+    async def touch_if_unchanged(self, company_id: int, token: datetime) -> bool:
+        """Compare-and-set on `updated_at`; row stays locked until the transaction ends."""
+        result = await self._session.execute(
+            update(Company)
+            .where(Company.id == company_id, Company.updated_at == token)
+            .values(updated_at=func.clock_timestamp())
+            .returning(Company.id)
+            .execution_options(synchronize_session=False)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def fail_stale_creating(self, older_than: timedelta) -> int:
+        result = await self._session.execute(
+            update(Company)
+            .where(
+                Company.lifecycle == CompanyLifecycle.creating,
+                Company.updated_at < func.now() - older_than,
+            )
+            .values(lifecycle=CompanyLifecycle.failed, updated_at=func.now())
+            .returning(Company.id)
+            .execution_options(synchronize_session=False)
+        )
+        return len(result.scalars().all())
+
+    async def set_traffic_status(self, company_id: int, status: TrafficStatus) -> None:
+        await self._session.execute(
+            update(Company)
+            .where(Company.id == company_id)
+            .values(traffic_status=status)
+            .execution_options(synchronize_session=False)
+        )
+
+    async def mark_failed(self, company_id: int, campaign_id: int | None) -> None:
+        await self._session.execute(
+            update(Company)
+            .where(Company.id == company_id)
+            .values(lifecycle=CompanyLifecycle.failed, keitaro_campaign_id=campaign_id)
+            .execution_options(synchronize_session=False)
+        )
 
     async def get_by_name_lower(self, name: str) -> Company | None:
         result = await self._session.execute(
