@@ -11,8 +11,9 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 
-import { getErrorCode, getErrorMessage, useCreateCompanyMutation } from "@/store/api";
+import { toastMutation } from "@/lib/toastMutation";
 import type { OfferCatalogItem } from "@/lib/types";
+import { getErrorCode, getErrorMessage, useCreateCompanyMutation } from "@/store/api";
 
 import { OfferCombobox } from "./OfferCombobox";
 
@@ -72,12 +73,19 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
     }
 
     try {
-      const company = await createCompany({
-        name: trimmed,
-        geo_codes,
-        offer_id: offer.offer_id,
-        idempotencyKey: crypto.randomUUID(),
-      }).unwrap();
+      const company = await toastMutation(
+        createCompany({
+          name: trimmed,
+          geo_codes,
+          offer_id: offer.offer_id,
+          idempotencyKey: crypto.randomUUID(),
+        }).unwrap(),
+        {
+          loading: "Creating company…",
+          success: "Company created",
+          errorTitle: "Create failed",
+        },
+      );
       reset();
       onOpenChange(false);
       onCreated?.(company.id);

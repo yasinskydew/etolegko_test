@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TrafficToggle } from "@/components/TrafficToggle";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { syncDisplayForCard } from "@/lib/syncDisplay";
+import { toastMutation } from "@/lib/toastMutation";
 import {
   getErrorMessage,
   useDisableCompanyMutation,
@@ -68,15 +69,29 @@ export default function CompanyCardPage() {
     setError(null);
     try {
       if (next === "active") {
-        await enableCompany({
-          companyId: company.id,
-          expected_version: company.version,
-        }).unwrap();
+        await toastMutation(
+          enableCompany({
+            companyId: company.id,
+            expected_version: company.version,
+          }).unwrap(),
+          {
+            loading: "Enabling traffic…",
+            success: "Company updated",
+            errorTitle: "Update failed",
+          },
+        );
       } else {
-        await disableCompany({
-          companyId: company.id,
-          expected_version: company.version,
-        }).unwrap();
+        await toastMutation(
+          disableCompany({
+            companyId: company.id,
+            expected_version: company.version,
+          }).unwrap(),
+          {
+            loading: "Disabling traffic…",
+            success: "Company updated",
+            errorTitle: "Update failed",
+          },
+        );
       }
     } catch (err) {
       setError(getErrorMessage(err));
@@ -92,11 +107,18 @@ export default function CompanyCardPage() {
       .map((g) => g.trim().toUpperCase())
       .filter(Boolean);
     try {
-      await patchGeo({
-        companyId: company.id,
-        geo_codes,
-        expected_version: company.version,
-      }).unwrap();
+      await toastMutation(
+        patchGeo({
+          companyId: company.id,
+          geo_codes,
+          expected_version: company.version,
+        }).unwrap(),
+        {
+          loading: "Saving geo…",
+          success: "Company updated",
+          errorTitle: "Update failed",
+        },
+      );
       setGeoInput(null);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -108,7 +130,11 @@ export default function CompanyCardPage() {
     setError(null);
     setMessage(null);
     try {
-      await fetchCompany(company.id).unwrap();
+      await toastMutation(fetchCompany(company.id).unwrap(), {
+        loading: "Fetching from tracker…",
+        success: "Fetched from tracker",
+        errorTitle: "Fetch failed",
+      });
       setMessage("Fetched from tracker.");
     } catch (err) {
       setError(getErrorMessage(err));
