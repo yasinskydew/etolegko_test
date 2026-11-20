@@ -53,7 +53,9 @@ async def list_companies(
         "`offers` (single offer at 100%) streams. "
         "Same key + same body → `200` with existing company; "
         "same key + different body → `409 idempotency_conflict`. "
-        "Tracker failure after reserve triggers compensation / may leave `creating`."
+        "Tracker failure removes the reserved row; if the tracker campaign cannot be "
+        "rolled back the company becomes `failed` and the same request can be retried. "
+        "`creating` rows older than 5 minutes are marked `failed`."
     ),
     responses={
         201: {"description": "Company created (`lifecycle=ready`)."},
@@ -99,8 +101,10 @@ async def get_company(
     response_model=CompanyOut,
     summary="Apply company draft (Push)",
     description=(
-        "Write full desired geo + offers state to DB and Keitaro in one request. "
-        "Used by FE Push after localStorage draft edits."
+        "Write full desired geo + offers state to Keitaro, then DB. "
+        "No DB lock is held during tracker calls. Geo applied but offers failed → "
+        "`502 keitaro_partial_apply` with only geo saved. Company changed meanwhile → "
+        "`409 concurrent_update`; differences show up as `drift`."
     ),
     responses={200: {"description": "Applied to DB and tracker."}, **RESP_COMPANY},
 )

@@ -1,5 +1,5 @@
 export type TrafficStatus = "active" | "disabled";
-export type CompanyLifecycle = "creating" | "ready";
+export type CompanyLifecycle = "creating" | "ready" | "failed";
 export type StreamType = "google" | "offers" | "plain";
 
 export type OfferRow = {

@@ -31,7 +31,10 @@ const LEGEND = [
   { label: "active", tone: "green" as const },
   { label: "disabled", tone: "red" as const },
   { label: "creating", tone: "purple" as const },
+  { label: "failed", tone: "orange" as const },
 ];
+
+const LIFECYCLE_TONE = { creating: "purple", failed: "orange" } as const;
 
 export default function CompaniesPage() {
   const { ready, authed } = useAuthGate();
@@ -123,7 +126,7 @@ export default function CompaniesPage() {
                       {geo ? geo : <Text color="fg.muted">—</Text>}
                     </Table.Cell>
                     <Table.Cell>
-                      {c.lifecycle === "creating" ? "—" : c.traffic_status}
+                      {c.lifecycle !== "ready" ? "—" : c.traffic_status}
                     </Table.Cell>
                     <Table.Cell>{c.lifecycle}</Table.Cell>
                   </Table.Row>
@@ -185,13 +188,13 @@ export default function CompaniesPage() {
                     </Text>
                     <StatusBadge
                       label={
-                        c.lifecycle === "creating"
-                          ? "creating"
+                        c.lifecycle !== "ready"
+                          ? c.lifecycle
                           : c.traffic_status
                       }
                       tone={
-                        c.lifecycle === "creating"
-                          ? "purple"
+                        c.lifecycle !== "ready"
+                          ? LIFECYCLE_TONE[c.lifecycle]
                           : c.traffic_status === "active"
                             ? "green"
                             : "red"

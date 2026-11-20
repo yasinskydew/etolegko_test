@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -6,16 +7,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app.clients.keitaro import init_keitaro, shutdown_keitaro
+from app.db import session as db_session
 from app.db.session import engine
 from app.errors import AppError, app_error_handler
 from app.openapi_meta import APP_DESCRIPTION, OPENAPI_TAGS
+from app.repositories import CompanyRepository
 from app.routers import auth, companies, offers
 from app.schemas.errors import HealthOut
+from app.services.company_service import CREATING_TTL
+
+logger = logging.getLogger(__name__)
+
+
+async def _fail_stale_creating() -> None:
+    try:
+        async with db_session.async_session_factory() as session:
+            count = await CompanyRepository(session).fail_stale_creating(CREATING_TTL)
+            await session.commit()
+        if count:
+            logger.warning("Marked %s stale creating companies as failed", count)
+    except Exception:
+        logger.exception("Stale creating sweep failed")
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await init_keitaro()
+    await _fail_stale_creating()
     yield
     await shutdown_keitaro()
     await engine.dispose()
