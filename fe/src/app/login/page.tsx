@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import { getToken, setToken } from "@/lib/auth";
+import { toastMutation } from "@/lib/toastMutation";
 import { getErrorMessage, useLoginMutation } from "@/store/api";
 
 export default function LoginPage() {
@@ -31,7 +32,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     try {
-      const res = await login({ username, password }).unwrap();
+      const res = await toastMutation(
+        login({ username, password }).unwrap(),
+        {
+          loading: "Signing in…",
+          success: "Signed in",
+          errorTitle: "Login failed",
+        },
+      );
       setToken(res.access_token);
       router.replace("/companies");
     } catch (err) {

@@ -42,8 +42,14 @@ const baseQueryWithAuth: BaseQueryFn<
 export function getErrorMessage(error: unknown): string {
   if (!error || typeof error !== "object") return "Request failed";
   const err = error as FetchBaseQueryError;
-  const data = err.data as ApiErrorBody | undefined;
+  const data = err.data as
+    | (ApiErrorBody & { detail?: string | { msg?: string }[] })
+    | undefined;
   if (data?.message) return data.message;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail) && data.detail[0]?.msg) {
+    return data.detail[0].msg;
+  }
   if (typeof err.status === "number") return `HTTP ${err.status}`;
   return "Request failed";
 }

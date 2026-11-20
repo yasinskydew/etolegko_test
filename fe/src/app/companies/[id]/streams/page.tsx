@@ -31,7 +31,9 @@ import {
   type QueueAction,
 } from "@/lib/actionQueue";
 import { canPinOrSetPercent, displayPercent } from "@/lib/streamRules";
+import { toastMutation } from "@/lib/toastMutation";
 import type { OfferCatalogItem, OfferRow } from "@/lib/types";
+import { toaster } from "@/components/ui/toaster";
 import {
   getErrorMessage,
   useCancelCompanyMutation,
@@ -102,6 +104,11 @@ export default function StreamsEditorPage() {
       );
       if (!check.ok) {
         setError(check.reason);
+        toaster.error({
+          title: "Invalid share",
+          description: check.reason,
+          meta: { closable: true },
+        });
         return;
       }
     }
@@ -110,14 +117,21 @@ export default function StreamsEditorPage() {
     bumpQueue();
 
     try {
-      await streamAction({
-        companyId,
-        streamId: offersStream.id,
-        action: action.action,
-        offer_id: action.offer_id,
-        percent: "percent" in action ? action.percent : undefined,
-        expected_version: company.version,
-      }).unwrap();
+      await toastMutation(
+        streamAction({
+          companyId,
+          streamId: offersStream.id,
+          action: action.action,
+          offer_id: action.offer_id,
+          percent: "percent" in action ? action.percent : undefined,
+          expected_version: company.version,
+        }).unwrap(),
+        {
+          loading: "Updating offers…",
+          success: "Share updated",
+          errorTitle: "Offer update failed",
+        },
+      );
       removeQueued(companyId, tabId, [queued.id]);
       bumpQueue();
       setMessage("Share updated from server response.");
@@ -156,7 +170,11 @@ export default function StreamsEditorPage() {
         const refreshed = await companyQuery.refetch().unwrap();
         version = refreshed.version;
       }
-      await pushCompany(companyId).unwrap();
+      await toastMutation(pushCompany(companyId).unwrap(), {
+        loading: "Pushing to tracker…",
+        success: "Pushed to tracker",
+        errorTitle: "Push failed",
+      });
       clearQueue(companyId, tabId);
       bumpQueue();
       setMessage("Pushed to tracker.");
@@ -172,7 +190,11 @@ export default function StreamsEditorPage() {
     try {
       clearQueue(companyId, tabId);
       bumpQueue();
-      await cancelCompany(companyId).unwrap();
+      await toastMutation(cancelCompany(companyId).unwrap(), {
+        loading: "Cancelling…",
+        success: "Cancelled — draft restored from snapshot",
+        errorTitle: "Cancel failed",
+      });
       setMessage("Cancelled. Working copy restored from snapshot.");
     } catch (err) {
       setError(getErrorMessage(err));
@@ -183,7 +205,11 @@ export default function StreamsEditorPage() {
     if (fetchDisabled) return;
     setError(null);
     try {
-      await fetchCompany(companyId).unwrap();
+      await toastMutation(fetchCompany(companyId).unwrap(), {
+        loading: "Fetching from tracker…",
+        success: "Fetched from tracker",
+        errorTitle: "Fetch failed",
+      });
       setMessage("Fetched from tracker.");
     } catch (err) {
       setError(getErrorMessage(err));
@@ -473,6 +499,7 @@ export default function StreamsEditorPage() {
                     value={selectedOffer}
                     onChange={setSelectedOffer}
                     label=""
+                    excludeOfferIds={offers.map((o) => o.offer_id)}
                   />
                 </Box>
                 <Button

@@ -17,6 +17,8 @@ type Props = {
   value: OfferCatalogItem | null;
   onChange: (offer: OfferCatalogItem | null) => void;
   disabled?: boolean;
+  /** Offer ids already in the stream table — hidden from select. */
+  excludeOfferIds?: number[];
 };
 
 export function OfferCombobox({
@@ -24,6 +26,7 @@ export function OfferCombobox({
   value,
   onChange,
   disabled,
+  excludeOfferIds,
 }: Props) {
   const [query, setQuery] = useState("");
   const [trigger, result] = useLazyListOffersQuery();
@@ -36,10 +39,16 @@ export function OfferCombobox({
     return () => clearTimeout(t);
   }, [query, trigger]);
 
-  const items = useMemo(
-    () => result.data?.items ?? [],
-    [result.data?.items],
+  const excluded = useMemo(
+    () => new Set(excludeOfferIds ?? []),
+    [excludeOfferIds],
   );
+
+  const items = useMemo(() => {
+    const all = result.data?.items ?? [];
+    if (excluded.size === 0) return all;
+    return all.filter((item) => !excluded.has(item.offer_id));
+  }, [result.data?.items, excluded]);
 
   const { collection, filter, set } = useListCollection({
     initialItems: items,
