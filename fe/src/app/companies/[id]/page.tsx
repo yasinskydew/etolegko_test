@@ -6,6 +6,7 @@ import {
   Heading,
   HStack,
   SimpleGrid,
+  Skeleton,
   Stack,
   Table,
   Text,
@@ -17,6 +18,7 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { TrafficToggle } from "@/components/TrafficToggle";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { readCompanyDraft } from "@/lib/companyDraft";
@@ -215,16 +217,20 @@ export default function CompanyCardPage() {
                   <Text fontSize="xs" fontWeight="medium" color="fg.muted">
                     {label}
                   </Text>
-                  <Text
-                    fontSize="2xl"
-                    fontWeight="semibold"
-                    color="gray.fg"
-                    mt="2"
-                  >
-                    {value == null
-                      ? "—"
-                      : value.toLocaleString("en-US").replace(/,/g, " ")}
-                  </Text>
+                  {statsQuery.isLoading ? (
+                    <Skeleton h="8" w="20" mt="2" />
+                  ) : (
+                    <Text
+                      fontSize="2xl"
+                      fontWeight="semibold"
+                      color="gray.fg"
+                      mt="2"
+                    >
+                      {value == null
+                        ? "—"
+                        : value.toLocaleString("en-US").replace(/,/g, " ")}
+                    </Text>
+                  )}
                 </Box>
               ))}
             </SimpleGrid>
@@ -329,7 +335,43 @@ export default function CompanyCardPage() {
             </Box>
           </>
         ) : companyQuery.isLoading ? (
-          <Text color="fg.muted">Loading…</Text>
+          <Stack gap="4" aria-busy aria-label="Loading company">
+            <Stack gap="2">
+              <Skeleton h="8" w="48" />
+              <Skeleton h="5" w="20" />
+              <HStack gap="2">
+                <Skeleton h="5" w="16" rounded="full" />
+                <Skeleton h="5" w="12" rounded="full" />
+              </HStack>
+            </Stack>
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap="3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} h="24" rounded="md" />
+              ))}
+            </SimpleGrid>
+            <Box
+              bg="bg"
+              borderWidth="1px"
+              borderColor="border.subtle"
+              rounded="md"
+              p="4"
+            >
+              <Heading as="h2" textStyle="md.semibold" mb="2">
+                Offers
+              </Heading>
+              <Table.Root size="sm" variant="outline">
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeader>Offer</Table.ColumnHeader>
+                    <Table.ColumnHeader>Share</Table.ColumnHeader>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  <TableSkeletonRows columns={[{}, { width: "12" }]} />
+                </Table.Body>
+              </Table.Root>
+            </Box>
+          </Stack>
         ) : null}
       </Stack>
     </AppShell>

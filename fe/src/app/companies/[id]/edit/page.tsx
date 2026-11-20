@@ -9,6 +9,7 @@ import {
   IconButton,
   Image,
   Input,
+  Skeleton,
   Stack,
   Table,
   Text,
@@ -20,6 +21,7 @@ import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
 import { OfferCombobox } from "@/components/OfferCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { toaster } from "@/components/ui/toaster";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import {
@@ -555,8 +557,52 @@ export default function CompanyEditPage() {
               </HStack>
             </Box>
           </>
-        ) : companyQuery.isLoading ? (
-          <Text color="fg.muted">Loading…</Text>
+        ) : companyQuery.isLoading || (company && !draft) ? (
+          <Stack gap="4" aria-busy aria-label="Loading company">
+            <HStack justify="space-between" flexWrap="wrap" gap="2">
+              <Stack gap="1">
+                <Skeleton h="8" w="48" />
+                <Skeleton h="5" w="16" rounded="full" />
+              </Stack>
+              <HStack gap="2">
+                <Skeleton h="8" w="24" />
+                <Skeleton h="8" w="20" />
+                <Skeleton h="8" w="16" />
+              </HStack>
+            </HStack>
+            <Skeleton h="24" rounded="md" />
+            <Box
+              bg="bg"
+              borderWidth="1px"
+              borderColor="border.subtle"
+              rounded="md"
+              p="4"
+            >
+              <Heading as="h2" textStyle="md.semibold" mb="2">
+                Offers
+              </Heading>
+              <Box overflowX="auto">
+                <Table.Root size="sm" variant="outline">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader>Offer</Table.ColumnHeader>
+                      <Table.ColumnHeader>Share</Table.ColumnHeader>
+                      <Table.ColumnHeader w="20">Actions</Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    <TableSkeletonRows
+                      columns={[
+                        {},
+                        { width: "20", height: "8" },
+                        { width: "20", height: "8" },
+                      ]}
+                    />
+                  </Table.Body>
+                </Table.Root>
+              </Box>
+            </Box>
+          </Stack>
         ) : null}
       </Stack>
     </AppShell>

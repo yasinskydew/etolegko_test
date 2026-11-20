@@ -7,6 +7,7 @@ import {
   HStack,
   Input,
   SimpleGrid,
+  Skeleton,
   Stack,
   Table,
   Text,
@@ -19,10 +20,12 @@ import { AppShell } from "@/components/AppShell";
 import { CreateCompanyModal } from "@/components/CreateCompanyModal";
 import { PagePagination } from "@/components/PagePagination";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { getErrorMessage, useListCompaniesQuery } from "@/store/api";
 
 const PAGE_SIZE = 20;
+const SKELETON_ROWS = 8;
 
 const LEGEND = [
   { label: "active", tone: "green" as const },
@@ -45,6 +48,7 @@ export default function CompaniesPage() {
 
   const total = data?.total ?? 0;
   const items = data?.items ?? [];
+  const initialLoading = !data && isFetching;
 
   if (!ready || !authed) return null;
 
@@ -93,7 +97,7 @@ export default function CompaniesPage() {
           </Text>
         ) : null}
 
-        <Box display={{ base: "none", md: "block" }}>
+        <Box display={{ base: "none", md: "block" }} aria-busy={isFetching}>
           <Table.Root size="sm" variant="outline" bg="bg" rounded="md">
             <Table.Header>
               <Table.Row bg="bg.subtle">
@@ -104,6 +108,9 @@ export default function CompaniesPage() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
+              {initialLoading ? (
+                <TableSkeletonRows columns={4} rows={SKELETON_ROWS} />
+              ) : null}
               {items.map((c) => {
                 const geos = c.geo_codes ?? [];
                 const geo = geos.length > 0 ? geos.join(", ") : null;
@@ -137,7 +144,27 @@ export default function CompaniesPage() {
           display={{ base: "grid", md: "none" }}
           columns={1}
           gap="4"
+          aria-busy={isFetching}
         >
+          {initialLoading
+            ? Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                <Box
+                  key={i}
+                  bg="bg"
+                  borderWidth="1px"
+                  borderColor="border.subtle"
+                  rounded="md"
+                  p="4"
+                  aria-hidden
+                >
+                  <Stack gap="2">
+                    <Skeleton h="6" w="60%" />
+                    <Skeleton h="5" w="16" rounded="full" />
+                    <Skeleton h="4" w="30%" />
+                  </Stack>
+                </Box>
+              ))
+            : null}
           {items.map((c) => {
             const geos = c.geo_codes ?? [];
             const geo = geos.length > 0 ? geos.join(", ") : "—";
