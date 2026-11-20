@@ -34,7 +34,6 @@ class CompanyRepository:
             .options(
                 selectinload(Company.geos),
                 selectinload(Company.streams).selectinload(Stream.offers),
-                selectinload(Company.streams).selectinload(Stream.snapshots),
             )
             .execution_options(populate_existing=True)
         )
@@ -61,7 +60,6 @@ class CompanyRepository:
             .options(
                 selectinload(Company.geos),
                 selectinload(Company.streams).selectinload(Stream.offers),
-                selectinload(Company.streams).selectinload(Stream.snapshots),
             )
         )
         return list(result.scalars().all()), total

@@ -2,7 +2,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Stream, StreamOffer, StreamOfferSnapshot, StreamType
+from app.models import Stream, StreamOffer, StreamType
 
 
 class StreamRepository:
@@ -13,10 +13,7 @@ class StreamRepository:
         result = await self._session.execute(
             select(Stream)
             .where(Stream.id == stream_id)
-            .options(
-                selectinload(Stream.offers),
-                selectinload(Stream.snapshots),
-            )
+            .options(selectinload(Stream.offers))
             .execution_options(populate_existing=True)
         )
         return result.scalar_one_or_none()
@@ -26,10 +23,7 @@ class StreamRepository:
             select(Stream)
             .where(Stream.company_id == company_id)
             .order_by(Stream.position)
-            .options(
-                selectinload(Stream.offers),
-                selectinload(Stream.snapshots),
-            )
+            .options(selectinload(Stream.offers))
             .execution_options(populate_existing=True)
         )
         return list(result.scalars().all())
@@ -41,18 +35,14 @@ class StreamRepository:
                 Stream.company_id == company_id,
                 Stream.type == StreamType.offers,
             )
-            .options(
-                selectinload(Stream.offers),
-                selectinload(Stream.snapshots),
-            )
+            .options(selectinload(Stream.offers))
             .execution_options(populate_existing=True)
         )
         return result.scalar_one_or_none()
 
     async def get_google_stream(self, company_id: int) -> Stream | None:
         result = await self._session.execute(
-            select(Stream)
-            .where(
+            select(Stream).where(
                 Stream.company_id == company_id,
                 Stream.type == StreamType.google,
             )
@@ -79,21 +69,6 @@ class StreamRepository:
         for offer in offers:
             offer.stream_id = stream_id
             self._session.add(offer)
-        await self._session.flush()
-
-    async def replace_snapshots(
-        self,
-        stream_id: int,
-        snapshots: list[StreamOfferSnapshot],
-    ) -> None:
-        await self._session.execute(
-            delete(StreamOfferSnapshot).where(
-                StreamOfferSnapshot.stream_id == stream_id
-            )
-        )
-        for snap in snapshots:
-            snap.stream_id = stream_id
-            self._session.add(snap)
         await self._session.flush()
 
     async def add_offer(self, offer: StreamOffer) -> StreamOffer:

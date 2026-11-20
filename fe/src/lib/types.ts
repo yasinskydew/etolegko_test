@@ -32,7 +32,6 @@ export type Company = {
   id: number;
   name: string;
   lifecycle: CompanyLifecycle;
-  version: number;
   traffic_status: TrafficStatus;
   geo_codes: string[];
   sync: SyncStatus;
@@ -48,7 +47,6 @@ export type CompanyListItem = {
   traffic_status: TrafficStatus;
   geo_codes: string[];
   sync: SyncStatus;
-  version: number;
 };
 
 export type CompanyListResponse = {

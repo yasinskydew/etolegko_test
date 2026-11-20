@@ -3,13 +3,13 @@ from fastapi import APIRouter, Depends, Header, Path, Query, Response, status
 from app.deps import get_company_service, get_current_user
 from app.openapi_meta import RESP_COMPANY, RESP_PROTECTED
 from app.schemas.company import (
+    CompanyApplyRequest,
     CompanyListResponse,
     CompanyOut,
     CreateCompanyRequest,
     GeoPatchRequest,
     StatsOut,
     StreamActionRequest,
-    VersionBody,
 )
 from app.services.company_service import CompanyService
 
@@ -84,9 +84,7 @@ async def create_company(
     response_model=CompanyOut,
     summary="Get company card",
     description=(
-        "Full company including streams, archive offers, computed `sync` and `drift`. "
-        "Opening the streams editor for `lifecycle=creating` is rejected by clients; "
-        "this endpoint still returns the card."
+        "Full company including streams, archive offers, computed `sync` and `drift`."
     ),
     responses={200: {"description": "Company card."}, **RESP_COMPANY},
 )
@@ -96,6 +94,25 @@ async def get_company(
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:
     return await service.get_company(company_id)
+
+
+@router.put(
+    "/{company_id}",
+    response_model=CompanyOut,
+    summary="Apply company draft (Push)",
+    description=(
+        "Write full desired geo + offers state to DB and Keitaro in one request. "
+        "Used by FE Push after localStorage draft edits."
+    ),
+    responses={200: {"description": "Applied to DB and tracker."}, **RESP_COMPANY},
+)
+async def apply_company(
+    company_id: int = Path(description="Local company id.", ge=1),
+    body: CompanyApplyRequest = ...,
+    _user: str = Depends(get_current_user),
+    service: CompanyService = Depends(get_company_service),
+) -> CompanyOut:
+    return await service.apply(company_id, body)
 
 
 @router.get(
@@ -121,11 +138,10 @@ async def company_stats(
     response_model=CompanyOut,
     summary="Apply offers-stream action",
     description=(
-        "Apply one editor action (`add`/`remove`/`restore`/`pin`/`unpin`/`set_percent`) "
-        "on an `offers` stream. Backend recalculates shares via WeightUtil when "
-        "participants remain. Requires matching `expected_version`."
+        "Apply one editor action on an `offers` stream. "
+        "Preferred editor path is FE draft + PUT /companies/{id}."
     ),
-    responses={200: {"description": "Updated company (new `version`)."}, **RESP_COMPANY},
+    responses={200: {"description": "Updated company."}, **RESP_COMPANY},
 )
 async def stream_actions(
     company_id: int = Path(description="Local company id.", ge=1),
@@ -141,11 +157,7 @@ async def stream_actions(
     "/{company_id}/sync",
     response_model=CompanyOut,
     summary="Push offers stream to Keitaro",
-    description=(
-        "Publish active (non-removed) offers-stream participants to Keitaro. "
-        "Idempotent. On success replaces snapshot with working copy (archive kept). "
-        "Geo and traffic are not part of Push."
-    ),
+    description="Publish current DB offers to Keitaro. Prefer PUT apply from FE draft.",
     responses={200: {"description": "Pushed; `sync=synced`."}, **RESP_COMPANY},
 )
 async def push_company(
@@ -159,13 +171,9 @@ async def push_company(
 @router.post(
     "/{company_id}/cancel",
     response_model=CompanyOut,
-    summary="Cancel local offer edits",
-    description=(
-        "Replace working copy with the last snapshot. Does not call Keitaro. "
-        "Offers added after last Push disappear; archived snapshot rows remain. "
-        "Geo and traffic are not rolled back."
-    ),
-    responses={200: {"description": "Working copy equals snapshot."}, **RESP_COMPANY},
+    summary="Cancel local draft (no-op on DB)",
+    description="Returns current DB company. FE clears localStorage draft.",
+    responses={200: {"description": "Current DB state."}, **RESP_COMPANY},
 )
 async def cancel_company(
     company_id: int = Path(description="Local company id.", ge=1),
@@ -181,11 +189,9 @@ async def cancel_company(
     summary="Fetch streams from Keitaro",
     description=(
         "Pull offers / geo / traffic / plain streams from Keitaro into local DB. "
-        "Allowed only when company is `ready` and offers stream is `synced` "
-        "(else `409 fetch_blocked`). Does not normalize shares. "
         "Unknown geo code → `422 unknown_geo` and full rollback."
     ),
-    responses={200: {"description": "Local state updated; stream stays synced."}, **RESP_COMPANY},
+    responses={200: {"description": "Local state updated."}, **RESP_COMPANY},
 )
 async def fetch_company(
     company_id: int = Path(description="Local company id.", ge=1),
@@ -220,17 +226,16 @@ async def patch_geo(
     summary="Enable traffic",
     description=(
         "Keitaro-first enable of the campaign, then set `traffic_status=active`. "
-        "Shares/streams/snapshot unchanged. Already-active → `200` without tracker write."
+        "Already-active → `200` without tracker write."
     ),
     responses={200: {"description": "Traffic enabled."}, **RESP_COMPANY},
 )
 async def enable_company(
     company_id: int = Path(description="Local company id.", ge=1),
-    body: VersionBody = ...,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:
-    return await service.set_traffic(company_id, body, enable=True)
+    return await service.set_traffic(company_id, enable=True)
 
 
 @router.post(
@@ -239,14 +244,13 @@ async def enable_company(
     summary="Disable traffic",
     description=(
         "Keitaro-first disable of the campaign, then set `traffic_status=disabled`. "
-        "Shares/streams/snapshot unchanged. Already-disabled → `200` without tracker write."
+        "Already-disabled → `200` without tracker write."
     ),
     responses={200: {"description": "Traffic disabled."}, **RESP_COMPANY},
 )
 async def disable_company(
     company_id: int = Path(description="Local company id.", ge=1),
-    body: VersionBody = ...,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:
-    return await service.set_traffic(company_id, body, enable=False)
+    return await service.set_traffic(company_id, enable=False)

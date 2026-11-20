@@ -3,23 +3,24 @@
 import {
   Box,
   Button,
-  Field,
   Heading,
   HStack,
-  Input,
   SimpleGrid,
   Stack,
+  Table,
   Text,
 } from "@chakra-ui/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { DriftAlert } from "@/components/DriftAlert";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TrafficToggle } from "@/components/TrafficToggle";
 import { useAuthGate } from "@/hooks/useAuthGate";
+import { readCompanyDraft } from "@/lib/companyDraft";
+import { displayPercent } from "@/lib/streamRules";
 import { syncDisplayForCard } from "@/lib/syncDisplay";
 import { toastMutation } from "@/lib/toastMutation";
 import {
@@ -29,16 +30,13 @@ import {
   useFetchCompanyMutation,
   useGetCompanyQuery,
   useGetCompanyStatsQuery,
-  usePatchGeoMutation,
 } from "@/store/api";
 
 export default function CompanyCardPage() {
   const { ready, authed } = useAuthGate();
   const params = useParams<{ id: string }>();
   const companyId = Number(params.id);
-  const [geoInput, setGeoInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const companyQuery = useGetCompanyQuery(companyId, {
     skip: !authed || !Number.isFinite(companyId),
@@ -48,16 +46,22 @@ export default function CompanyCardPage() {
   });
   const [enableCompany, enableState] = useEnableCompanyMutation();
   const [disableCompany, disableState] = useDisableCompanyMutation();
-  const [patchGeo, geoState] = usePatchGeoMutation();
   const [fetchCompany, fetchState] = useFetchCompanyMutation();
 
   const company = companyQuery.data;
   const offersStream = company?.streams.find((s) => s.type === "offers");
-  const offerNames =
-    offersStream?.offers.filter((o) => !o.removed) ?? [];
-  const sync = offersStream?.sync ?? company?.sync ?? null;
+  const googleStream = company?.streams.find((s) => s.type === "google");
+  const plainStreams =
+    company?.streams.filter((s) => s.type === "plain") ?? [];
+  const offers = offersStream?.offers ?? [];
+
+  const draftDirty = useMemo(() => {
+    if (!Number.isFinite(companyId)) return false;
+    return readCompanyDraft(companyId) != null;
+  }, [companyId, company?.id, companyQuery.fulfilledTimeStamp]);
+
   const fetchDisabled =
-    sync === "update_mode" ||
+    draftDirty ||
     !company ||
     company.lifecycle !== "ready" ||
     company.drift?.campaign_missing === true;
@@ -70,10 +74,7 @@ export default function CompanyCardPage() {
     try {
       if (next === "active") {
         await toastMutation(
-          enableCompany({
-            companyId: company.id,
-            expected_version: company.version,
-          }).unwrap(),
+          enableCompany({ companyId: company.id }).unwrap(),
           {
             loading: "Enabling traffic…",
             success: "Company updated",
@@ -82,10 +83,7 @@ export default function CompanyCardPage() {
         );
       } else {
         await toastMutation(
-          disableCompany({
-            companyId: company.id,
-            expected_version: company.version,
-          }).unwrap(),
+          disableCompany({ companyId: company.id }).unwrap(),
           {
             loading: "Disabling traffic…",
             success: "Company updated",
@@ -98,51 +96,22 @@ export default function CompanyCardPage() {
     }
   }
 
-  async function onSaveGeo() {
-    if (!company || geoInput === null) return;
-    setError(null);
-    setMessage(null);
-    const geo_codes = geoInput
-      .split(",")
-      .map((g) => g.trim().toUpperCase())
-      .filter(Boolean);
-    try {
-      await toastMutation(
-        patchGeo({
-          companyId: company.id,
-          geo_codes,
-          expected_version: company.version,
-        }).unwrap(),
-        {
-          loading: "Saving geo…",
-          success: "Company updated",
-          errorTitle: "Update failed",
-        },
-      );
-      setGeoInput(null);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  }
-
   async function onFetch() {
     if (fetchDisabled || !company) return;
     setError(null);
-    setMessage(null);
     try {
       await toastMutation(fetchCompany(company.id).unwrap(), {
         loading: "Fetching from tracker…",
         success: "Fetched from tracker",
         errorTitle: "Fetch failed",
       });
-      setMessage("Fetched from tracker.");
     } catch (err) {
       setError(getErrorMessage(err));
     }
   }
 
   const syncUi = company
-    ? syncDisplayForCard(company.sync, company.drift)
+    ? syncDisplayForCard(company.sync, company.drift, draftDirty)
     : null;
 
   return (
@@ -166,11 +135,6 @@ export default function CompanyCardPage() {
             {error}
           </Text>
         ) : null}
-        {message ? (
-          <Text color="fg.muted" fontSize="sm">
-            {message}
-          </Text>
-        ) : null}
 
         {company ? (
           <>
@@ -179,7 +143,7 @@ export default function CompanyCardPage() {
                 {company.name}
               </Heading>
               <Text color="fg.muted" textStyle="muted">
-                version {company.version} · {company.lifecycle}
+                {company.lifecycle}
               </Text>
               <HStack gap="2" flexWrap="wrap">
                 <StatusBadge
@@ -193,9 +157,7 @@ export default function CompanyCardPage() {
                   <StatusBadge
                     key={g}
                     label={g}
-                    tone={
-                      i === 0 ? "blue" : i === 1 ? "cyan" : "purple"
-                    }
+                    tone={i === 0 ? "blue" : i === 1 ? "cyan" : "purple"}
                   />
                 ))}
               </HStack>
@@ -216,7 +178,7 @@ export default function CompanyCardPage() {
                 opacity={fetchDisabled ? 0.4 : 1}
                 title={
                   fetchDisabled
-                    ? "Fetch requires synced flow (not updating) and an existing campaign"
+                    ? "Fetch requires no local draft and an existing campaign"
                     : "Pull campaign state from Keitaro"
                 }
                 onClick={() => void onFetch()}
@@ -230,9 +192,7 @@ export default function CompanyCardPage() {
                 colorPalette="blue"
                 disabled={company.lifecycle !== "ready"}
               >
-                <Link href={`/companies/${company.id}/streams`}>
-                  View details
-                </Link>
+                <Link href={`/companies/${company.id}/edit`}>Edit</Link>
               </Button>
             </HStack>
 
@@ -283,60 +243,90 @@ export default function CompanyCardPage() {
               rounded="md"
               p="4"
             >
-              <Field.Root>
-                <Field.Label>Geo codes</Field.Label>
-                <HStack>
-                  <Input
-                    value={geoInput ?? company.geo_codes.join(", ")}
-                    onChange={(e) => setGeoInput(e.target.value)}
-                    aria-label="Geo codes"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    colorPalette="cyan"
-                    loading={geoState.isLoading}
-                    onClick={() => void onSaveGeo()}
-                  >
-                    Save geo
-                  </Button>
-                </HStack>
-              </Field.Root>
+              <Text fontSize="sm" fontWeight="medium" color="gray.fg" mb="1">
+                Geo
+              </Text>
+              <Text fontSize="sm" color="fg.muted">
+                {company.geo_codes.join(", ") || "—"}
+              </Text>
             </Box>
 
-            <Stack gap="2">
-              <Heading as="h2" textStyle="sm.medium" color="gray.fg">
-                Streams
+            <Box
+              bg="bg"
+              borderWidth="1px"
+              borderColor="border.subtle"
+              rounded="md"
+              p="4"
+            >
+              <Heading as="h2" textStyle="md.semibold" mb="2">
+                Google
               </Heading>
+              <Text color="fg.muted" fontSize="sm">
+                {googleStream
+                  ? company.geo_codes.length
+                    ? `${company.geo_codes.join(", ")} · no offers`
+                    : "No offers"
+                  : "No google stream"}
+              </Text>
+            </Box>
+
+            {plainStreams.map((s) => (
               <Box
+                key={s.id}
                 bg="bg"
                 borderWidth="1px"
                 borderColor="border.subtle"
                 rounded="md"
-                overflow="hidden"
+                p="4"
               >
-                {offerNames.map((o) => (
-                  <Box
-                    key={o.offer_id}
-                    px="4"
-                    py="3"
-                    borderBottomWidth="1px"
-                    borderColor="border.subtle"
-                  >
-                    <Text fontSize="sm" fontWeight="medium" color="gray.fg">
-                      {o.name ?? `Offer ${o.offer_id}`}
-                    </Text>
-                  </Box>
-                ))}
-                {offerNames.length === 0 ? (
-                  <Box px="4" py="3">
-                    <Text color="fg.muted" fontSize="sm">
-                      No active offers
-                    </Text>
-                  </Box>
-                ) : null}
+                <Heading as="h2" textStyle="md.semibold">
+                  Plain #{s.position}
+                </Heading>
               </Box>
-            </Stack>
+            ))}
+
+            <Box
+              bg={draftDirty ? "yellow.subtle" : "bg"}
+              borderWidth="1px"
+              borderColor="border.subtle"
+              rounded="md"
+              p="4"
+            >
+              <HStack justify="space-between" mb="2">
+                <Heading as="h2" textStyle="md.semibold">
+                  Offers
+                </Heading>
+                {draftDirty ? (
+                  <StatusBadge label="updating" tone="orange" />
+                ) : null}
+              </HStack>
+              <Table.Root size="sm" variant="outline">
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeader>Offer</Table.ColumnHeader>
+                    <Table.ColumnHeader>Share</Table.ColumnHeader>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {offers.map((o) => (
+                    <Table.Row key={o.offer_id}>
+                      <Table.Cell>
+                        {o.offer_id} {o.name ?? ""}
+                        {o.removed ? " (removed)" : ""}
+                      </Table.Cell>
+                      <Table.Cell>{displayPercent(o)}%</Table.Cell>
+                    </Table.Row>
+                  ))}
+                  {offers.length === 0 ? (
+                    <Table.Row>
+                      <Table.Cell colSpan={2}>
+                        <Text color="fg.muted">No offers</Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  ) : null}
+                </Table.Body>
+              </Table.Root>
+            </Box>
           </>
         ) : companyQuery.isLoading ? (
           <Text color="fg.muted">Loading…</Text>

@@ -17,7 +17,7 @@ OPENAPI_TAGS: list[dict[str, str]] = [
         "name": "companies",
         "description": (
             "Company lifecycle and stream editor API. "
-            "Mutations use optimistic locking via `expected_version` / `version`. "
+            "Offer edits are drafted on FE; Push uses PUT /companies/{id}. "
             "Keitaro is reached only from the backend."
         ),
     },
@@ -34,7 +34,7 @@ Adrobot / Keitaro wrapper admin API.
 
 **Errors:** JSON body `{ "error": "<code>", "message": "<text>", "fields"?: {...} }`.
 
-**Versioning:** company mutations send `expected_version`; mismatch → `409 version_conflict`.
+**Drafts:** offer/geo edits live in FE localStorage; Push applies via `PUT /companies/{id}`.
 
 Canonical behaviour: `docs/api_contracts.md` and `task/system-design.md`.
 """.strip()
@@ -50,8 +50,7 @@ ERROR_404: dict[str, Any] = {
 ERROR_409: dict[str, Any] = {
     "model": ErrorBody,
     "description": (
-        "Conflict: `version_conflict`, `name_taken`, `idempotency_conflict`, "
-        "`fetch_blocked`, or `campaign_missing`."
+        "Conflict: `name_taken`, `idempotency_conflict`, or `campaign_missing`."
     ),
 }
 ERROR_422: dict[str, Any] = {
