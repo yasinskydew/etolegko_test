@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Protocol
+
 from app.clients.keitaro import KeitaroCampaign, KeitaroClient
 from app.errors import AppError
-from app.models import Company, Stream, StreamType
+from app.models import Company, Stream, StreamOffer, StreamType
 from app.schemas.company import (
     CompanyListItem,
     CompanyOut,
@@ -10,6 +13,42 @@ from app.schemas.company import (
     OfferRow,
     StreamOut,
 )
+from app.services.weight_util import OfferWeight
+
+
+class _WeightLike(Protocol):
+    offer_id: int
+    percent: int
+    pinned: bool
+    removed: bool
+    position: int
+
+
+def to_weights(rows: Iterable[_WeightLike]) -> list[OfferWeight]:
+    return [
+        OfferWeight(
+            offer_id=r.offer_id,
+            percent=int(r.percent),
+            pinned=bool(r.pinned),
+            removed=bool(r.removed),
+            position=int(r.position),
+        )
+        for r in rows
+    ]
+
+
+def to_rows(stream_id: int, weights: Iterable[OfferWeight]) -> list[StreamOffer]:
+    return [
+        StreamOffer(
+            stream_id=stream_id,
+            offer_id=w.offer_id,
+            percent=w.percent,
+            pinned=w.pinned,
+            removed=w.removed,
+            position=w.position,
+        )
+        for w in weights
+    ]
 
 
 def _offer_name(cache: dict[int, str | None], offer_id: int) -> str | None:

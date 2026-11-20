@@ -14,7 +14,7 @@ from app.openapi_meta import APP_DESCRIPTION, OPENAPI_TAGS
 from app.repositories import CompanyRepository
 from app.routers import auth, companies, offers
 from app.schemas.errors import HealthOut
-from app.services.company_service import CREATING_TTL
+from app.services.companies import CREATING_TTL
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,13 @@
 from fastapi import APIRouter, Depends, Header, Path, Query, Response, status
 
-from app.deps import get_company_service, get_current_user
+from app.deps import (
+    get_apply_company,
+    get_company_queries,
+    get_create_company,
+    get_current_user,
+    get_fetch_company,
+    get_traffic_service,
+)
 from app.openapi_meta import RESP_COMPANY, RESP_PROTECTED
 from app.schemas.company import (
     CompanyApplyRequest,
@@ -9,7 +16,13 @@ from app.schemas.company import (
     CreateCompanyRequest,
     StatsOut,
 )
-from app.services.company_service import CompanyService
+from app.services.companies import (
+    ApplyCompanyDraftUseCase,
+    CompanyQueryService,
+    CreateCompanyUseCase,
+    FetchFromKeitaroUseCase,
+    TrafficService,
+)
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -37,7 +50,7 @@ async def list_companies(
         description="Page size (max 100).",
     ),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    service: CompanyQueryService = Depends(get_company_queries),
 ) -> CompanyListResponse:
     return await service.list_companies(q=q, page=page, page_size=page_size)
 
@@ -72,9 +85,9 @@ async def create_company(
         description="Required unique key for create idempotency.",
     ),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    use_case: CreateCompanyUseCase = Depends(get_create_company),
 ) -> CompanyOut:
-    company, status_code = await service.create_company(body, idempotency_key or "")
+    company, status_code = await use_case.execute(body, idempotency_key or "")
     response.status_code = status_code
     return company
 
@@ -91,7 +104,7 @@ async def create_company(
 async def get_company(
     company_id: int = Path(description="Local company id.", ge=1),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    service: CompanyQueryService = Depends(get_company_queries),
 ) -> CompanyOut:
     return await service.get_company(company_id)
 
@@ -112,9 +125,9 @@ async def apply_company(
     company_id: int = Path(description="Local company id.", ge=1),
     body: CompanyApplyRequest = ...,
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    use_case: ApplyCompanyDraftUseCase = Depends(get_apply_company),
 ) -> CompanyOut:
-    return await service.apply(company_id, body)
+    return await use_case.execute(company_id, body)
 
 
 @router.get(
@@ -130,7 +143,7 @@ async def apply_company(
 async def company_stats(
     company_id: int = Path(description="Local company id.", ge=1),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    service: CompanyQueryService = Depends(get_company_queries),
 ) -> StatsOut:
     return await service.stats(company_id)
 
@@ -148,9 +161,9 @@ async def company_stats(
 async def fetch_company(
     company_id: int = Path(description="Local company id.", ge=1),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    use_case: FetchFromKeitaroUseCase = Depends(get_fetch_company),
 ) -> CompanyOut:
-    return await service.fetch(company_id)
+    return await use_case.execute(company_id)
 
 
 @router.post(
@@ -166,7 +179,7 @@ async def fetch_company(
 async def enable_company(
     company_id: int = Path(description="Local company id.", ge=1),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    service: TrafficService = Depends(get_traffic_service),
 ) -> CompanyOut:
     return await service.set_traffic(company_id, enable=True)
 
@@ -184,6 +197,6 @@ async def enable_company(
 async def disable_company(
     company_id: int = Path(description="Local company id.", ge=1),
     _user: str = Depends(get_current_user),
-    service: CompanyService = Depends(get_company_service),
+    service: TrafficService = Depends(get_traffic_service),
 ) -> CompanyOut:
     return await service.set_traffic(company_id, enable=False)
