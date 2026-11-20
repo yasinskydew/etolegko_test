@@ -1,5 +1,3 @@
-from collections.abc import AsyncGenerator
-
 from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,8 +62,3 @@ def get_offers_service(
     keitaro: KeitaroClient = Depends(get_keitaro),
 ) -> OffersService:
     return OffersService(keitaro=keitaro)
-
-
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    async for session in get_session():
-        yield session

@@ -1,4 +1,4 @@
-import type { Drift, SyncStatus } from "./types";
+import type { CompanyLifecycle, Drift } from "./types";
 
 export type SyncDisplay = {
   label: string;
@@ -18,17 +18,17 @@ export function driftActive(drift: Drift | null | undefined): boolean {
 
 /** Sync badge for company card / editor (local draft + tracker drift). */
 export function syncDisplayForCard(
-  sync: SyncStatus,
+  lifecycle: CompanyLifecycle,
   drift: Drift | null | undefined,
   draftDirty = false,
 ): SyncDisplay | null {
-  if (draftDirty || sync === "update_mode") {
+  if (draftDirty) {
     return { label: "updating", tone: "orange" };
   }
   if (driftActive(drift)) {
     return { label: "drift", tone: "orange" };
   }
-  if (sync === "synced") {
+  if (lifecycle === "ready") {
     return { label: "synced", tone: "green" };
   }
   return null;

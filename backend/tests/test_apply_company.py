@@ -1,4 +1,4 @@
-"""PUT /companies/{id}: apply full draft to DB + Keitaro; Cancel is FE-local no-op."""
+"""PUT /companies/{id}: apply full draft to DB + Keitaro."""
 
 from __future__ import annotations
 
@@ -50,7 +50,6 @@ async def test_put_apply_writes_offers_and_geo_to_keitaro(
     body = resp.json()
     assert body["geo_codes"] == ["MX", "AU"]
     assert "version" not in body
-    assert offers_stream(body)["sync"] == "synced"
     by_id = {
         o["offer_id"]: o
         for o in offers_stream(body)["offers"]
@@ -157,39 +156,23 @@ async def test_put_apply_keitaro_failure_leaves_db(
 
 
 @pytest.mark.asyncio
-async def test_cancel_is_noop_without_keitaro(
+async def test_legacy_endpoints_removed(
     client: AsyncClient,
     auth_headers: dict[str, str],
-    mock_keitaro: MockKeitaroClient,
 ) -> None:
     company = await create_ready_company(
-        client, auth_headers, name="test_yasinsky_company_cancel"
+        client, auth_headers, name="test_yasinsky_company_legacy"
     )
     cid = company["id"]
-    stream_id = offers_stream(company)["id"]
+    sid = offers_stream(company)["id"]
+    assert "sync" not in company
+    assert "sync" not in offers_stream(company)
 
-    edited = await client.post(
-        f"/companies/{cid}/streams/{stream_id}/actions",
-        headers=auth_headers,
-        json={"action": "add", "offer_id": 3801},
-    )
-    assert edited.status_code == 200
-    working = offers_stream(edited.json())["offers"]
-
-    mutating = (
-        "create",
-        "delete",
-        "update_stream_offers",
-        "enable",
-        "disable",
-        "update_google_geo",
-    )
-    before = {k: mock_keitaro.calls[k] for k in mutating}
-    cancel = await client.post(f"/companies/{cid}/cancel", headers=auth_headers)
-    assert cancel.status_code == 200, cancel.text
-    assert {k: mock_keitaro.calls[k] for k in mutating} == before
-    # Cancel no longer restores snapshot — returns current DB (edited) state.
-    assert {
-        (o["offer_id"], o["percent"], o["removed"])
-        for o in offers_stream(cancel.json())["offers"]
-    } == {(o["offer_id"], o["percent"], o["removed"]) for o in working}
+    for method, url, body in (
+        ("POST", f"/companies/{cid}/streams/{sid}/actions", {"action": "add", "offer_id": 1}),
+        ("POST", f"/companies/{cid}/sync", None),
+        ("POST", f"/companies/{cid}/cancel", None),
+        ("PATCH", f"/companies/{cid}/geo", {"geo_codes": ["MX"]}),
+    ):
+        resp = await client.request(method, url, headers=auth_headers, json=body)
+        assert resp.status_code in (404, 405), (method, url, resp.status_code)

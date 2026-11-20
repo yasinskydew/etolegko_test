@@ -1,6 +1,5 @@
 export type TrafficStatus = "active" | "disabled";
 export type CompanyLifecycle = "creating" | "ready";
-export type SyncStatus = "synced" | "update_mode" | null;
 export type StreamType = "google" | "offers" | "plain";
 
 export type OfferRow = {
@@ -16,7 +15,6 @@ export type Stream = {
   id: number;
   type: StreamType;
   position: number;
-  sync: SyncStatus;
   offers: OfferRow[];
 };
 
@@ -34,7 +32,6 @@ export type Company = {
   lifecycle: CompanyLifecycle;
   traffic_status: TrafficStatus;
   geo_codes: string[];
-  sync: SyncStatus;
   streams: Stream[];
   drift: Drift | null;
   reconcile_unavailable: boolean;
@@ -46,7 +43,6 @@ export type CompanyListItem = {
   lifecycle: CompanyLifecycle;
   traffic_status: TrafficStatus;
   geo_codes: string[];
-  sync: SyncStatus;
 };
 
 export type CompanyListResponse = {
@@ -77,11 +73,3 @@ export type ApiErrorBody = {
   message: string;
   fields?: Record<string, string>;
 };
-
-export type StreamAction =
-  | "add"
-  | "remove"
-  | "restore"
-  | "pin"
-  | "unpin"
-  | "set_percent";

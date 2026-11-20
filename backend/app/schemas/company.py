@@ -1,5 +1,3 @@
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
 from app.models.enums import CompanyLifecycle, StreamType, TrafficStatus
@@ -27,13 +25,6 @@ class StreamOut(BaseModel):
     id: int = Field(description="Local stream id.")
     type: StreamType = Field(description="`google` | `offers` | `plain`.")
     position: int = Field(description="1-based stream order (`google`=1, `offers`=2).")
-    sync: Literal["synced", "update_mode"] | None = Field(
-        default=None,
-        description=(
-            "DB offers stream is always `synced` after system-update-1; "
-            "local draft / updating is FE-only."
-        ),
-    )
     offers: list[OfferRow] = Field(
         default_factory=list,
         description="Empty for `google`/`plain`. Includes archive rows for `offers`.",
@@ -63,10 +54,6 @@ class CompanyOut(BaseModel):
         default_factory=list,
         description="Ordered geo codes from `company_geo`.",
     )
-    sync: Literal["synced", "update_mode"] | None = Field(
-        default=None,
-        description="DB sync; draft/updating is FE localStorage.",
-    )
     streams: list[StreamOut] = Field(default_factory=list)
     drift: DriftOut | None = Field(
         default=None,
@@ -90,10 +77,6 @@ class CompanyListItem(BaseModel):
     geo_codes: list[str] = Field(
         default_factory=list,
         description="Ordered codes from `company_geo`.",
-    )
-    sync: Literal["synced", "update_mode"] | None = Field(
-        default=None,
-        description="DB offers sync (always synced when ready).",
     )
 
 
@@ -141,20 +124,6 @@ class CompanyApplyRequest(BaseModel):
     offers: list[OfferApplyRow] = Field(
         description="Full offers-stream rows including archive (`removed`).",
     )
-
-
-class StreamActionRequest(BaseModel):
-    """Legacy single editor action (optional; draft lives on FE)."""
-
-    action: Literal["add", "remove", "restore", "pin", "unpin", "set_percent"]
-    offer_id: int
-    percent: int | None = None
-
-
-class GeoPatchRequest(BaseModel):
-    """Update geo via Keitaro-first write on the google stream filter."""
-
-    geo_codes: list[str] = Field(min_length=1, description="Replacement ordered geo list.")
 
 
 class StatsOut(BaseModel):

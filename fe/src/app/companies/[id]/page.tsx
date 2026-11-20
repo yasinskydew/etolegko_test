@@ -113,7 +113,7 @@ export default function CompanyCardPage() {
   }
 
   const syncUi = company
-    ? syncDisplayForCard(company.sync, company.drift, draftDirty)
+    ? syncDisplayForCard(company.lifecycle, company.drift, draftDirty)
     : null;
 
   return (

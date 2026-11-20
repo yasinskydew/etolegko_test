@@ -13,7 +13,6 @@ import type {
   CompanyListResponse,
   OfferCatalogResponse,
   Stats,
-  StreamAction,
 } from "@/lib/types";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -153,50 +152,6 @@ export const api = createApi({
       ],
     }),
 
-    streamAction: build.mutation<
-      Company,
-      {
-        companyId: number;
-        streamId: number;
-        action: StreamAction;
-        offer_id: number;
-        percent?: number;
-      }
-    >({
-      query: ({ companyId, streamId, ...body }) => ({
-        url: `/companies/${companyId}/streams/${streamId}/actions`,
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: (_r, _e, arg) => [
-        { type: "company", id: arg.companyId },
-        { type: "companies", id: "LIST" },
-        { type: "stats", id: arg.companyId },
-      ],
-    }),
-
-    pushCompany: build.mutation<Company, number>({
-      query: (id) => ({
-        url: `/companies/${id}/sync`,
-        method: "POST",
-      }),
-      invalidatesTags: (_r, _e, id) => [
-        { type: "company", id },
-        { type: "companies", id: "LIST" },
-      ],
-    }),
-
-    cancelCompany: build.mutation<Company, number>({
-      query: (id) => ({
-        url: `/companies/${id}/cancel`,
-        method: "POST",
-      }),
-      invalidatesTags: (_r, _e, id) => [
-        { type: "company", id },
-        { type: "companies", id: "LIST" },
-      ],
-    }),
-
     fetchCompany: build.mutation<Company, number>({
       query: (id) => ({
         url: `/companies/${id}/fetch`,
@@ -209,27 +164,10 @@ export const api = createApi({
       ],
     }),
 
-    patchGeo: build.mutation<
-      Company,
-      { companyId: number; geo_codes: string[] }
-    >({
-      query: ({ companyId, ...body }) => ({
-        url: `/companies/${companyId}/geo`,
-        method: "PATCH",
-        body,
-      }),
-      invalidatesTags: (_r, _e, arg) => [
-        { type: "company", id: arg.companyId },
-        { type: "companies", id: "LIST" },
-      ],
-    }),
-
     enableCompany: build.mutation<Company, { companyId: number }>({
       query: ({ companyId }) => ({
         url: `/companies/${companyId}/enable`,
         method: "POST",
-        // No expected_version after system-update-1; empty JSON body is fine.
-        body: {},
       }),
       invalidatesTags: (_r, _e, arg) => [
         { type: "company", id: arg.companyId },
@@ -241,7 +179,6 @@ export const api = createApi({
       query: ({ companyId }) => ({
         url: `/companies/${companyId}/disable`,
         method: "POST",
-        body: {},
       }),
       invalidatesTags: (_r, _e, arg) => [
         { type: "company", id: arg.companyId },
@@ -266,11 +203,7 @@ export const {
   useGetCompanyStatsQuery,
   useCreateCompanyMutation,
   useApplyCompanyMutation,
-  useStreamActionMutation,
-  usePushCompanyMutation,
-  useCancelCompanyMutation,
   useFetchCompanyMutation,
-  usePatchGeoMutation,
   useEnableCompanyMutation,
   useDisableCompanyMutation,
   useListOffersQuery,
