@@ -70,7 +70,9 @@ test.describe("login smoke", () => {
     await page.getByLabel("Username").fill("admin");
     await page.getByLabel("Password").fill("wrong");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByText("Invalid credentials.")).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Invalid credentials."),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 });

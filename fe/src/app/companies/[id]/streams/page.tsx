@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-/** Streams editor moved to /companies/{id}/edit — redirect. */
+/** Streams editor moved to /companies/{id}/edit — intentional redirect. */
 export default function StreamsRedirectPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
