@@ -1,3 +1,5 @@
+"""WeightUtil unit tests (system update 1: pinned ≤100, free get remainder incl. 0%)."""
+
 import pytest
 
 from app.services.weight_util import (
@@ -45,13 +47,43 @@ def test_tail_34_33_33() -> None:
     assert sum(r.percent for r in result) == 100
 
 
-def test_pin_keeps_percent() -> None:
+def test_pin_keeps_percent_free_share_remainder() -> None:
     offers = [_o(1, 40, pinned=True, position=1), _o(2, 0, position=2), _o(3, 0, position=3)]
     result = redistribute(offers)
     by_id = {r.offer_id: r.percent for r in result}
     assert by_id[1] == 40
     assert by_id[2] + by_id[3] == 60
     assert sum(by_id.values()) == 100
+
+
+def test_all_pinned_sum_lt_100_left_as_is() -> None:
+    offers = [
+        _o(1, 40, pinned=True, position=1),
+        _o(2, 30, pinned=True, position=2),
+    ]
+    result = redistribute(offers)
+    assert [r.percent for r in result] == [40, 30]
+    assert sum(r.percent for r in result) == 70
+
+
+def test_pinned_100_free_get_zero() -> None:
+    offers = [
+        _o(1, 100, pinned=True, position=1),
+        _o(2, 50, pinned=False, position=2),
+    ]
+    result = redistribute(offers)
+    by_id = {r.offer_id: r.percent for r in result}
+    assert by_id[1] == 100
+    assert by_id[2] == 0
+
+
+def test_pinned_sum_over_100_raises() -> None:
+    offers = [
+        _o(1, 60, pinned=True, position=1),
+        _o(2, 50, pinned=True, position=2),
+    ]
+    with pytest.raises(WeightError, match="Pinned sum exceeds 100"):
+        redistribute(offers)
 
 
 def test_restore_clears_pin() -> None:
@@ -66,7 +98,7 @@ def test_restore_clears_pin() -> None:
     assert sum(r.percent for r in result if not r.removed) == 100
 
 
-def test_set_percent_last_free_forbidden_unless_100() -> None:
+def test_set_percent_over_pinned_cap_forbidden() -> None:
     offers = [
         _o(1, 60, pinned=True, position=1),
         _o(2, 40, pinned=False, position=2),
@@ -75,7 +107,7 @@ def test_set_percent_last_free_forbidden_unless_100() -> None:
         apply_set_percent(offers, 2, 50)
 
 
-def test_set_percent_last_free_ok_when_sum_100() -> None:
+def test_set_percent_ok_when_pinned_sum_le_100() -> None:
     offers = [
         _o(1, 60, pinned=True, position=1),
         _o(2, 40, pinned=False, position=2),
@@ -85,7 +117,7 @@ def test_set_percent_last_free_ok_when_sum_100() -> None:
     assert sum(r.percent for r in result) == 100
 
 
-def test_remove_last_participant_skips_util() -> None:
+def test_remove_last_participant_skips_redistribute() -> None:
     offers = [_o(1, 100, position=1)]
     result = apply_remove(offers, 1)
     assert len(result) == 1
