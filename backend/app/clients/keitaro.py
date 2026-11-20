@@ -856,8 +856,8 @@ def _keitaro_error_message(response: httpx.Response) -> str:
 def _map_keitaro_http_error(response: httpx.Response) -> AppError:
     message = _keitaro_error_message(response)
     if response.status_code == 404:
-        # Distinguishable so GET helpers can return None; still 502 to API.
-        return AppError(502, KEITARO_NOT_FOUND, message)
+        # GET helpers turn this into None; on writes the tracker resource is gone (409).
+        return AppError(409, KEITARO_NOT_FOUND, message)
     return AppError(502, "keitaro_bad_gateway", message)
 
 

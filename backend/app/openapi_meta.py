@@ -32,45 +32,49 @@ Adrobot / Keitaro wrapper admin API.
 
 **Auth:** `Authorization: Bearer <jwt>` on all routes except `POST /auth/login` and `GET /health`.
 
-**Errors:** JSON body `{ "error": "<code>", "message": "<text>", "fields"?: {...} }`.
+**Errors:** every non-2xx response is `ErrorBody`
+`{ "error": "<code>", "message": "<text>", "fields"?: {"<field>": "<text>"} }`,
+including request validation (`422 validation_error` with `fields`). Each `error` code
+has one HTTP status; see the `ErrorBody` schema.
 
 **Drafts:** offer/geo edits live in FE localStorage; Push applies via `PUT /companies/{id}`.
-
-Canonical behaviour: `docs/api_contracts.md` and `task/system-design.md`.
 """.strip()
 
 ERROR_401: dict[str, Any] = {
     "model": ErrorBody,
-    "description": "Missing or invalid JWT (`unauthorized`).",
+    "description": "`unauthorized`: missing or invalid JWT / credentials.",
 }
 ERROR_404: dict[str, Any] = {
     "model": ErrorBody,
-    "description": "Company or stream not found (`not_found`).",
+    "description": "`not_found`: company or stream does not exist.",
 }
 ERROR_409: dict[str, Any] = {
     "model": ErrorBody,
     "description": (
-        "Conflict: `name_taken`, `idempotency_conflict`, or `campaign_missing`."
+        "`name_taken`, `idempotency_conflict`, `company_not_ready` (creating / failed), "
+        "`campaign_missing`, `concurrent_update`, `keitaro_not_found`."
     ),
 }
 ERROR_422: dict[str, Any] = {
     "model": ErrorBody,
-    "description": "Validation failed (`validation_error` or `unknown_geo`).",
+    "description": "`validation_error` (with `fields`) or `unknown_geo`.",
 }
 ERROR_502: dict[str, Any] = {
     "model": ErrorBody,
-    "description": "Keitaro upstream error (`keitaro_bad_gateway`).",
+    "description": "`keitaro_bad_gateway` or `keitaro_partial_apply` (with `fields`).",
 }
 ERROR_504: dict[str, Any] = {
     "model": ErrorBody,
-    "description": "Keitaro timeout (`keitaro_timeout`).",
+    "description": "`keitaro_timeout`.",
 }
 
 RESP_AUTH = {
     401: ERROR_401,
+    422: ERROR_422,
 }
 RESP_PROTECTED = {
     401: ERROR_401,
+    422: ERROR_422,
     502: ERROR_502,
     504: ERROR_504,
 }
@@ -78,5 +82,4 @@ RESP_COMPANY = {
     **RESP_PROTECTED,
     404: ERROR_404,
     409: ERROR_409,
-    422: ERROR_422,
 }

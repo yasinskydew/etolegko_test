@@ -26,37 +26,80 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-const baseQueryWithAuth: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError
-> = async (args, api, extra) => {
-  const result = await rawBaseQuery(args, api, extra);
-  if (result.error?.status === 401) {
-    clearToken();
-  }
-  return result;
-};
+export type ApiError = { status: number | "NETWORK"; data: ApiErrorBody };
 
-export function getErrorMessage(error: unknown): string {
-  if (!error || typeof error !== "object") return "Request failed";
-  const err = error as FetchBaseQueryError;
-  const data = err.data as
-    | (ApiErrorBody & { detail?: string | { msg?: string }[] })
-    | undefined;
-  if (data?.message) return data.message;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail) && data.detail[0]?.msg) {
-    return data.detail[0].msg;
-  }
-  if (typeof err.status === "number") return `HTTP ${err.status}`;
-  return "Request failed";
+function isApiErrorBody(data: unknown): data is ApiErrorBody {
+  return (
+    !!data &&
+    typeof data === "object" &&
+    typeof (data as ApiErrorBody).error === "string" &&
+    typeof (data as ApiErrorBody).message === "string"
+  );
 }
 
-export function getErrorCode(error: unknown): string | undefined {
+/** Every failed request ends up as `{ status, data: ApiErrorBody }`. */
+function toApiError(error: FetchBaseQueryError): ApiError {
+  if (typeof error.status === "number") {
+    return {
+      status: error.status,
+      data: isApiErrorBody(error.data)
+        ? error.data
+        : { error: "internal_error", message: `HTTP ${error.status}` },
+    };
+  }
+  if (error.status === "PARSING_ERROR") {
+    return {
+      status: error.originalStatus,
+      data: { error: "internal_error", message: `HTTP ${error.originalStatus}` },
+    };
+  }
+  return {
+    status: "NETWORK",
+    data: {
+      error: "network_error",
+      message: "Network error. Check your connection and try again.",
+    },
+  };
+}
+
+const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, ApiError> = async (
+  args,
+  api,
+  extra,
+) => {
+  const result = await rawBaseQuery(args, api, extra);
+  if (!result.error) return { data: result.data, meta: result.meta };
+  const error = toApiError(result.error);
+  if (error.status === 401) {
+    clearToken();
+  }
+  return { error, meta: result.meta };
+};
+
+function apiErrorBody(error: unknown): ApiErrorBody | undefined {
   if (!error || typeof error !== "object") return undefined;
-  const data = (error as FetchBaseQueryError).data as ApiErrorBody | undefined;
-  return data?.error;
+  const data = (error as Partial<ApiError>).data;
+  return isApiErrorBody(data) ? data : undefined;
+}
+
+export function getErrorMessage(error: unknown): string {
+  return apiErrorBody(error)?.message ?? "Request failed";
+}
+
+export function getErrorCode(error: unknown): ApiErrorBody["error"] | undefined {
+  return apiErrorBody(error)?.error;
+}
+
+export function getFieldErrors(error: unknown): Record<string, string> {
+  return apiErrorBody(error)?.fields ?? {};
+}
+
+/** `message` plus per-field details, for toasts and inline alerts. */
+export function describeError(error: unknown): string {
+  const details = Object.entries(getFieldErrors(error)).map(
+    ([field, text]) => `${field}: ${text}`,
+  );
+  return [getErrorMessage(error), ...details].join(" ");
 }
 
 export const api = createApi({

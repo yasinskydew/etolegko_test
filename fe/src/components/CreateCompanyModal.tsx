@@ -13,7 +13,12 @@ import { useState } from "react";
 
 import { toastMutation } from "@/lib/toastMutation";
 import type { OfferCatalogItem } from "@/lib/types";
-import { getErrorCode, getErrorMessage, useCreateCompanyMutation } from "@/store/api";
+import {
+  getErrorCode,
+  getErrorMessage,
+  getFieldErrors,
+  useCreateCompanyMutation,
+} from "@/store/api";
 
 import { OfferCombobox } from "./OfferCombobox";
 
@@ -90,13 +95,14 @@ export function CreateCompanyModal({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       onCreated?.(company.id);
     } catch (err) {
-      const code = getErrorCode(err);
-      const msg = getErrorMessage(err);
-      if (code === "name_taken") {
-        setNameError(msg || "This name is already used.");
-      } else {
-        setLocalError(msg);
-      }
+      const { name: nameField, ...otherFields } = getFieldErrors(err);
+      const nameMessage =
+        nameField ??
+        (getErrorCode(err) === "name_taken" ? getErrorMessage(err) : undefined);
+      if (nameMessage) setNameError(nameMessage);
+      const other = Object.values(otherFields);
+      if (other.length > 0) setLocalError(other.join(" "));
+      else if (!nameMessage) setLocalError(getErrorMessage(err));
     }
   }
 

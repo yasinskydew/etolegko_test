@@ -1,24 +1,31 @@
 from pydantic import BaseModel, Field
 
+from app.errors import ErrorCode
+
 
 class ErrorBody(BaseModel):
-    """Standard API error payload (`docs/api_contracts.md`)."""
+    """Every non-2xx response, including request validation (422), 404/405 and 500.
 
-    error: str = Field(
-        description=(
-            "Machine-readable code: unauthorized, not_found, version_conflict, "
-            "name_taken, idempotency_conflict, fetch_blocked, campaign_missing, "
-            "validation_error, unknown_geo, keitaro_bad_gateway, keitaro_timeout."
-        ),
-        examples=["version_conflict"],
-    )
+    Status per `error`: 401 `unauthorized`; 404 `not_found`; 405 `method_not_allowed`;
+    409 `name_taken`, `idempotency_conflict`, `company_not_ready`, `campaign_missing`,
+    `concurrent_update`, `keitaro_not_found`; 422 `validation_error`, `unknown_geo`;
+    500 `internal_error`; 502 `keitaro_bad_gateway`, `keitaro_partial_apply`;
+    504 `keitaro_timeout`. Clients branch on `error`, show `message`, and map `fields`
+    onto form inputs.
+    """
+
+    error: ErrorCode = Field(description="Machine-readable code; fixed HTTP status per code.")
     message: str = Field(
-        description="Human-readable explanation.",
-        examples=["expected_version does not match company.version."],
+        description="Human-readable explanation, safe to show to the user.",
+        examples=["Request validation failed."],
     )
     fields: dict[str, str] | None = Field(
         default=None,
-        description="Optional per-field validation messages (e.g. for name_taken).",
+        description=(
+            "Per-field messages. Keys are request field paths without the location "
+            "prefix (`name`, `geo_codes`, `offers.0.percent`)."
+        ),
+        examples=[{"name": "Already exists. Pick another name."}],
     )
 
 
