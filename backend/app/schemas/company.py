@@ -6,7 +6,7 @@ from app.models.enums import CompanyLifecycle, StreamType, TrafficStatus
 
 
 class OfferRow(BaseModel):
-    """Offer row in the working copy of an `offers` stream."""
+    """Offer row in an `offers` stream."""
 
     offer_id: int = Field(description="Keitaro offer id.")
     name: str | None = Field(
@@ -30,8 +30,8 @@ class StreamOut(BaseModel):
     sync: Literal["synced", "update_mode"] | None = Field(
         default=None,
         description=(
-            "Computed for `offers` only: working copy vs snapshot. "
-            "`null` for `google`/`plain`."
+            "DB offers stream is always `synced` after system-update-1; "
+            "local draft / updating is FE-only."
         ),
     )
     offers: list[OfferRow] = Field(
@@ -58,7 +58,6 @@ class CompanyOut(BaseModel):
         description="Company name as stored and sent to Keitaro. Create requires the test_yasinsky_company prefix."
     )
     lifecycle: CompanyLifecycle = Field(description="`creating` | `ready`.")
-    version: int = Field(description="Optimistic lock counter; send as expected_version.")
     traffic_status: TrafficStatus = Field(description="`active` | `disabled`.")
     geo_codes: list[str] = Field(
         default_factory=list,
@@ -66,7 +65,7 @@ class CompanyOut(BaseModel):
     )
     sync: Literal["synced", "update_mode"] | None = Field(
         default=None,
-        description="Sync status of the `offers` stream; `null` while `creating`.",
+        description="DB sync; draft/updating is FE localStorage.",
     )
     streams: list[StreamOut] = Field(default_factory=list)
     drift: DriftOut | None = Field(
@@ -94,12 +93,8 @@ class CompanyListItem(BaseModel):
     )
     sync: Literal["synced", "update_mode"] | None = Field(
         default=None,
-        description=(
-            "Local offers working copy vs snapshot; `null` while creating. "
-            "Tracker drift is not computed on list — only on company card GET."
-        ),
+        description="DB offers sync (always synced when ready).",
     )
-    version: int
 
 
 class CompanyListResponse(BaseModel):
@@ -131,34 +126,35 @@ class CreateCompanyRequest(BaseModel):
     )
 
 
-class StreamActionRequest(BaseModel):
-    """Single editor action on an `offers` stream (not the final composition)."""
-
-    action: Literal["add", "remove", "restore", "pin", "unpin", "set_percent"] = Field(
-        description=(
-            "`add` of an archived offer is treated as `restore`. "
-            "`percent` is required only for `set_percent`."
-        ),
-    )
+class OfferApplyRow(BaseModel):
     offer_id: int
-    percent: int | None = Field(
-        default=None,
-        description="Required for `set_percent` (1–100); omit otherwise.",
+    percent: int = Field(ge=0, le=100)
+    pinned: bool = False
+    removed: bool = False
+    position: int = Field(ge=1)
+
+
+class CompanyApplyRequest(BaseModel):
+    """Full desired company state for Push (DB + Keitaro)."""
+
+    geo_codes: list[str] = Field(min_length=1)
+    offers: list[OfferApplyRow] = Field(
+        description="Full offers-stream rows including archive (`removed`).",
     )
-    expected_version: int = Field(description="Must equal current `company.version`.")
+
+
+class StreamActionRequest(BaseModel):
+    """Legacy single editor action (optional; draft lives on FE)."""
+
+    action: Literal["add", "remove", "restore", "pin", "unpin", "set_percent"]
+    offer_id: int
+    percent: int | None = None
 
 
 class GeoPatchRequest(BaseModel):
     """Update geo via Keitaro-first write on the google stream filter."""
 
     geo_codes: list[str] = Field(min_length=1, description="Replacement ordered geo list.")
-    expected_version: int
-
-
-class VersionBody(BaseModel):
-    """Body for enable/disable traffic toggles."""
-
-    expected_version: int = Field(description="Must equal current `company.version`.")
 
 
 class StatsOut(BaseModel):

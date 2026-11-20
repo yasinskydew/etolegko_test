@@ -52,7 +52,6 @@ def map_company_list_item(company: Company) -> CompanyListItem:
             list(company.streams),
             company.lifecycle.value,
         ),
-        version=company.version,
     )
 
 
@@ -73,7 +72,6 @@ def map_company(
         id=company.id,
         name=company.name,
         lifecycle=company.lifecycle,
-        version=company.version,
         traffic_status=company.traffic_status,
         geo_codes=geo_codes,
         sync=compute_company_sync(list(company.streams), company.lifecycle.value),
@@ -102,7 +100,9 @@ def compute_drift(
     if k_google is not None and sorted(k_google.filters_geo) != sorted(our_geo):
         drift.geo = True
 
-    expected_traffic = "active" if company.traffic_status.value == "active" else "disabled"
+    expected_traffic = (
+        "active" if company.traffic_status.value == "active" else "disabled"
+    )
     if campaign.state != expected_traffic:
         drift.traffic = True
 
@@ -144,7 +144,11 @@ def compute_drift(
     their_ids = {s.stream_id for s in campaign.streams}
     if google and google.keitaro_stream_id and google.keitaro_stream_id not in their_ids:
         drift.streams = True
-    if offers_stream and offers_stream.keitaro_stream_id and offers_stream.keitaro_stream_id not in their_ids:
+    if (
+        offers_stream
+        and offers_stream.keitaro_stream_id
+        and offers_stream.keitaro_stream_id not in their_ids
+    ):
         drift.streams = True
     extra_plain = their_ids - known_ids
     missing_plain = our_plain_ids - their_ids

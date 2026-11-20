@@ -236,7 +236,7 @@ async def _clean_db() -> AsyncIterator[None]:
         await conn.execute(
             text(
                 "TRUNCATE TABLE "
-                "stream_offer_snapshot, stream_offer, stream, "
+                "stream_offer, stream, "
                 "company_geo, idempotency_key, company "
                 "RESTART IDENTITY CASCADE"
             )

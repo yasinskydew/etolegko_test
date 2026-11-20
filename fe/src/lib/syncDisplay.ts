@@ -16,12 +16,13 @@ export function driftActive(drift: Drift | null | undefined): boolean {
   );
 }
 
-/** Sync badge for company card / editor (local sync + tracker drift from GET). */
+/** Sync badge for company card / editor (local draft + tracker drift). */
 export function syncDisplayForCard(
   sync: SyncStatus,
   drift: Drift | null | undefined,
+  draftDirty = false,
 ): SyncDisplay | null {
-  if (sync === "update_mode") {
+  if (draftDirty || sync === "update_mode") {
     return { label: "updating", tone: "orange" };
   }
   if (driftActive(drift)) {

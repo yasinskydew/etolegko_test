@@ -11,7 +11,6 @@ from app.models.enums import StreamType
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.stream_offer import StreamOffer
-    from app.models.stream_offer_snapshot import StreamOfferSnapshot
 
 
 class Stream(Base):
@@ -42,9 +41,4 @@ class Stream(Base):
         back_populates="stream",
         cascade="all, delete-orphan",
         order_by="StreamOffer.position",
-    )
-    snapshots: Mapped[list[StreamOfferSnapshot]] = relationship(
-        back_populates="stream",
-        cascade="all, delete-orphan",
-        order_by="StreamOfferSnapshot.position",
     )
