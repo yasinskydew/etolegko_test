@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Header, Path, Query, Response, status
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Body, Depends, Header, Path, Query, Response, status
 
 from app.deps import get_company_service, get_current_user
 from app.openapi_meta import RESP_COMPANY, RESP_PROTECTED
@@ -232,6 +234,8 @@ async def patch_geo(
 )
 async def enable_company(
     company_id: int = Path(description="Local company id.", ge=1),
+    # Body optional: VersionBody removed in system-update-1; ignore leftover payloads.
+    _body: Annotated[dict[str, Any] | None, Body()] = None,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:
@@ -250,6 +254,7 @@ async def enable_company(
 )
 async def disable_company(
     company_id: int = Path(description="Local company id.", ge=1),
+    _body: Annotated[dict[str, Any] | None, Body()] = None,
     _user: str = Depends(get_current_user),
     service: CompanyService = Depends(get_company_service),
 ) -> CompanyOut:

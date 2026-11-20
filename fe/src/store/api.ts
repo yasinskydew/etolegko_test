@@ -228,6 +228,8 @@ export const api = createApi({
       query: ({ companyId }) => ({
         url: `/companies/${companyId}/enable`,
         method: "POST",
+        // No expected_version after system-update-1; empty JSON body is fine.
+        body: {},
       }),
       invalidatesTags: (_r, _e, arg) => [
         { type: "company", id: arg.companyId },
@@ -239,6 +241,7 @@ export const api = createApi({
       query: ({ companyId }) => ({
         url: `/companies/${companyId}/disable`,
         method: "POST",
+        body: {},
       }),
       invalidatesTags: (_r, _e, arg) => [
         { type: "company", id: arg.companyId },
