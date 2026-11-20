@@ -211,7 +211,7 @@ export default function StreamsEditorPage() {
                 size="sm"
                 maxW="16"
                 value={draft}
-                disabled={!offer.pinned}
+                disabled={offer.pinned}
                 aria-label={`Share for ${offer.offer_id}`}
                 onChange={(e) =>
                   setPercentDraft((prev) => ({
@@ -221,17 +221,25 @@ export default function StreamsEditorPage() {
                 }
                 onBlur={() => {
                   const n = Number(draft);
-                  if (
-                    !Number.isInteger(n) ||
-                    n < 1 ||
-                    n > 100 ||
-                    n === offer.percent
-                  ) {
+                  const resetDraft = () =>
                     setPercentDraft((prev) => {
                       const next = { ...prev };
                       delete next[offer.offer_id];
                       return next;
                     });
+                  if (!Number.isInteger(n) || n < 1 || n > 100) {
+                    resetDraft();
+                    setError("Share must be an integer from 1 to 100.");
+                    return;
+                  }
+                  if (n === offer.percent) {
+                    resetDraft();
+                    return;
+                  }
+                  const check = canPinOrSetPercent(offers, offer.offer_id, n);
+                  if (!check.ok) {
+                    resetDraft();
+                    setError(check.reason);
                     return;
                   }
                   void runAction({

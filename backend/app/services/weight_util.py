@@ -21,8 +21,12 @@ def participants(offers: list[OfferWeight]) -> list[OfferWeight]:
 
 
 def redistribute(offers: list[OfferWeight]) -> list[OfferWeight]:
-    """Recalculate free shares so participant percents sum to 100.
+    """Recalculate free shares from remainder after pinned.
 
+    Rules (system update 1):
+    - pinned sum must be ≤ 100 (never > 100); may be < 100
+    - free share (100 − pinned) equally; if pinned = 100 → free get 0%
+    - no free and pinned < 100 → leave as-is (Push allowed)
     Empty stream (no participants) is left unchanged.
     Tail remainder goes +1 by ascending position, then offer_id.
     """
@@ -37,15 +41,12 @@ def redistribute(offers: list[OfferWeight]) -> list[OfferWeight]:
     if pinned_sum > 100:
         raise WeightError("Pinned sum exceeds 100")
     if not free:
-        if pinned_sum != 100:
-            raise WeightError("All pinned but sum is not 100")
+        # All pinned: sum may be < 100; Push is allowed without forcing 100.
         return list(offers)
 
     remainder = 100 - pinned_sum
-    if remainder < len(free):
-        raise WeightError("Not enough remainder for free offers")
-
-    base, extra = divmod(remainder, len(free))
+    # Free may receive 0% when pinned already fills 100.
+    base, extra = divmod(remainder, len(free)) if free else (0, 0)
     free_sorted = sorted(free, key=lambda o: (o.position, o.offer_id))
     assigned: dict[int, int] = {}
     for i, offer in enumerate(free_sorted):
@@ -76,23 +77,10 @@ def validate_set_percent(
     others_pinned = [
         o for o in active if o.offer_id != offer_id and o.pinned
     ]
-    free_others = [
-        o for o in active if o.offer_id != offer_id and not o.pinned
-    ]
     pinned_sum_after = sum(o.percent for o in others_pinned) + percent
-
-    if not free_others:
-        if pinned_sum_after != 100:
-            raise WeightError(
-                "Cannot set_percent last free offer unless pinned sum becomes 100"
-            )
-        return
 
     if pinned_sum_after > 100:
         raise WeightError("Pinned sum would exceed 100")
-    remainder = 100 - pinned_sum_after
-    if remainder < len(free_others):
-        raise WeightError("Not enough remainder for free offers")
 
 
 def apply_add(offers: list[OfferWeight], offer_id: int) -> list[OfferWeight]:
@@ -160,6 +148,12 @@ def apply_pin(offers: list[OfferWeight], offer_id: int) -> list[OfferWeight]:
             updated.append(offer)
     if not found:
         raise WeightError("Offer not found")
+    # Pinning must not leave pinned sum > 100 (e.g. free already hold remainder).
+    pinned_sum = sum(
+        o.percent for o in participants(updated) if o.pinned
+    )
+    if pinned_sum > 100:
+        raise WeightError("Pinned sum would exceed 100")
     return redistribute(updated)
 
 
