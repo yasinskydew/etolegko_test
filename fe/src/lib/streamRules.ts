@@ -6,8 +6,8 @@ export function activeOffers(offers: OfferRow[]): OfferRow[] {
 }
 
 /**
- * Forbid pinning the last unpinned active offer via set_percent/pin
- * when pinned sum would not be 100.
+ * Validate pin / set_percent against system-update-1 weight rules:
+ * pinned sum ≤ 100 (may be < 100); free share the remainder (may be 0%).
  */
 export function canPinOrSetPercent(
   offers: OfferRow[],
@@ -18,32 +18,25 @@ export function canPinOrSetPercent(
   const target = active.find((o) => o.offer_id === offerId);
   if (!target) return { ok: false, reason: "Offer is not active." };
 
+  if (nextPercent !== undefined) {
+    if (!Number.isInteger(nextPercent) || nextPercent < 1 || nextPercent > 100) {
+      return { ok: false, reason: "Share must be an integer from 1 to 100." };
+    }
+  }
+
   const othersPinned = active.filter(
     (o) => o.offer_id !== offerId && o.pinned,
-  );
-  const freeOthers = active.filter(
-    (o) => o.offer_id !== offerId && !o.pinned,
   );
 
   const pinnedSum =
     othersPinned.reduce((s, o) => s + o.percent, 0) +
     (nextPercent ?? target.percent);
 
-  if (freeOthers.length === 0 && pinnedSum !== 100) {
+  if (pinnedSum > 100) {
     return {
       ok: false,
-      reason: "Cannot pin the last free offer unless pinned shares sum to 100.",
+      reason: "Pinned shares cannot exceed 100%.",
     };
-  }
-
-  if (freeOthers.length > 0) {
-    const remainder = 100 - pinnedSum;
-    if (remainder < freeOthers.length) {
-      return {
-        ok: false,
-        reason: "Not enough remainder for free offers (min 1% each).",
-      };
-    }
   }
 
   return { ok: true };
