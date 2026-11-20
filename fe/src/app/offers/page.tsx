@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { PagePagination } from "@/components/PagePagination";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { getErrorMessage, useListOffersQuery } from "@/store/api";
 
@@ -67,7 +68,13 @@ export default function OffersPage() {
           <Text color="fg.error">{getErrorMessage(error)}</Text>
         ) : null}
 
-        <Table.Root size="sm" variant="outline" bg="bg" rounded="md">
+        <Table.Root
+          size="sm"
+          variant="outline"
+          bg="bg"
+          rounded="md"
+          aria-busy={isFetching}
+        >
           <Table.Header>
             <Table.Row bg="bg.subtle">
               <Table.ColumnHeader>ID</Table.ColumnHeader>
@@ -76,6 +83,12 @@ export default function OffersPage() {
             </Table.Row>
           </Table.Header>
           <Table.Body>
+            {!data && isFetching ? (
+              <TableSkeletonRows
+                columns={[{ width: "12" }, {}, { width: "20" }]}
+                rows={8}
+              />
+            ) : null}
             {paged.map((o) => (
               <Table.Row key={o.offer_id}>
                 <Table.Cell>{o.offer_id}</Table.Cell>
